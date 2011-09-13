@@ -6,21 +6,22 @@ var http = require('http'),
     assetRequest = require('assetRequest.js'),
     htmlRequest = require('htmlRequest.js'),
     options = {
-        domain: "stest.io:1234",
-        port: 1234
+        domain: "soup.wthack.de:1234",
+        port: 1234,
+        cachePath: './cache/',
+        loadingCachePath: './loading/',
+        maxFileSize: 10485760
     };
 
 onRequest = function(request, response) {
-    var assetRegex = /.*asset\.soup\.io\/.*/,
-        params = url.parse(request.url),
+    var assetRegex = new RegExp(".*\.asset\." + options.domain),
         assetRequestHandler = assetRequest(options),
         htmlRequestHandler = htmlRequest(options);
 
-    console.log("new request:" + util.inspect(params));
-    if (params.host && params.host.match(assetRegex)) {
-        assetRequestHandler(request, response);
+    if (request.headers.host && request.headers.host.match(assetRegex)) {
+        new assetRequestHandler(request, response);
     } else {
-        htmlRequestHandler(request, response);
+        new htmlRequestHandler(request, response);
     }
 };
 

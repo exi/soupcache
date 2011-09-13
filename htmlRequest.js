@@ -3,8 +3,7 @@ var url = require('url'),
     util = require('util');
     mod = function(options) {
         return function(request, response) {
-            var api = {},
-                that = this;
+            var that = this;
             that.request = request;
             that.response = response;
             that.soupData = "";
@@ -23,7 +22,6 @@ var url = require('url'),
             that.getSoupDomain = function() {
                 var subDomain = that.getSubDomain();
                 subDomain = subDomain?subDomain + "." : "";
-                console.log("soup domain: " + subDomain + "soup.io");
                 return subDomain + "soup.io";
             }
 
@@ -41,15 +39,15 @@ var url = require('url'),
             };
 
             that.getModifiedSoupResponseHeaders = function(headers) {
-                console.log("soup response headers: ");
-                console.log(util.inspect(headers));
                 if (headers.location) {
                     headers.location = that.getNewResponseLocationField(headers.location);
                 }
-                console.log("new soup response headers: ");
-                console.log(util.inspect(headers));
 
                 return headers;
+            };
+
+            that.getModifiedSoupResponseData = function() {
+                return that.soupData.replace(/asset\.soup\.io/g, "asset." + options.domain);
             };
 
             that.onSoupData = function(chunk) {
@@ -57,12 +55,11 @@ var url = require('url'),
             };
 
             that.onSoupEnd = function() {
-                that.response.write(that.soupData, 'binary')
+                that.response.write(that.getModifiedSoupResponseData());
                 that.response.end();
             };
 
             that.onSoupResponse = function(res) {
-                console.log('got soup response: ' + res.statusCode);
                 that.response.writeHead(res.statusCode, that.getModifiedSoupResponseHeaders(res.headers))
                 res.on('data', that.onSoupData);
                 res.on('end', that.onSoupEnd);
@@ -79,14 +76,13 @@ var url = require('url'),
             };
 
             that.getModifiedSoupRequestHeader = function(headers) {
-                console.log("soup reuqest header: " + util.inspect(headers));
                 headers = that.setNewRequestHost(headers);
                 headers = that.setEncodingToPlaintext(headers);
                 return headers;
             };
 
             that.onRequestData = function(chunk) {
-                that.proxy_request.write(chunk, 'binary');
+                that.proxy_request.write(chunk);
             };
 
             that.onRequestEnd = function() {
@@ -100,15 +96,15 @@ var url = require('url'),
             };
 
             that.respondeWithOriginalPage = function() {
-                console.log("creating soup request");
                 that.proxy = http.createClient(80, that.getSoupDomain());
-                that.proxy_request = proxy.request(
+                that.proxy_request = that.proxy.request(
                     that.request.method,
                     that.request.url,
                     that.getModifiedSoupRequestHeader(that.request.headers));
 
                 that.proxy_request.on('response', that.onSoupResponse);
                 that.proxy_request.on('error', that.onSoupError);
+                that.request.setEncoding('binary');
                 that.request.on('data', that.onRequestData);
                 that.request.on('end', that.onRequestEnd);
             }
