@@ -36,7 +36,7 @@ var url = require('url'),
             };
 
             that.respondeWithFile = function() {
-                console.log("serve file " + that.getFileName());
+                //console.log("serve file " + that.getFileName());
                 var fileBuffer = cacheHandler.getFileBuffer(that.getFileName());
                 that.response.writeHead(200, {
                     'Content-Type': cacheHandler.getFileMimeType(that.getFileName()),
@@ -59,7 +59,7 @@ var url = require('url'),
 
             that.fetchResponse = function(res) {
                 res.setEncoding('binary');
-                that.fileBuffer = new Buffer(options.maxFileSize);
+                that.fileBuffer = new Buffer(parseInt(res.headers['content-length']));
                 res.on('data', that.onFileData);
                 res.on('end', that.onFileEndSaveAndResponde);
 
@@ -74,10 +74,15 @@ var url = require('url'),
                 that.fetchResponse);
             };
 
-            if (cacheHandler.exists(that.getFileName())) {
-                that.respondeWithFile();
-            } else {
-                that.fetchFileAndResponde();
+            try {
+                if (cacheHandler.exists(that.getFileName())) {
+                    that.respondeWithFile();
+                } else {
+                    that.fetchFileAndResponde();
+                }
+            } catch (e) {
+                console.error("error:" + e.message);
+                that.response.end();
             }
         };
     };

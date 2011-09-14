@@ -13,7 +13,7 @@ var http = require('http'),
         maxFileSize: 10485760
     };
 
-onRequest = function(request, response) {
+var onRequest = function(request, response) {
     var assetRegex = new RegExp(".*\.asset\." + options.domain),
         assetRequestHandler = assetRequest(options),
         htmlRequestHandler = htmlRequest(options);
