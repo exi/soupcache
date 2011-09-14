@@ -1,7 +1,8 @@
 var url = require('url'),
     http = require('http'),
     util = require('util');
-    mod = function(options) {
+
+var mod = function(options) {
         return function(request, response) {
             var that = this;
             that.request = request;
@@ -23,15 +24,6 @@ var url = require('url'),
             that.getSoupDomain = function() {
                 return that.subDomain + "soup.io";
             }
-
-            that.getOptionsForRequest = function() {
-                var subdomain = that.subDomain;
-                return {
-                    host: host,
-                    port: 80,
-                    path: that.request.url
-                };
-            };
 
             that.getNewResponseLocationField = function(location) {
                 return location.replace(/soup\.io/, options.domain);
@@ -57,14 +49,13 @@ var url = require('url'),
             };
 
             that.getModifiedSoupResponseData = function() {
-                console.log("subdomain:"+that.subDomain);
 
                 var newdata = that.soupData.toString();
                 newdata = newdata.replace(
                         /soup\.io/g, options.domain);
 
                 var buf = new Buffer(newdata);
-                that.soupDataLength = Buffer.byteLength(newdata, 'binary');
+                that.soupDataLength = buf.length;
                 return buf;
             };
 
@@ -72,64 +63,6 @@ var url = require('url'),
                 that.response.writeHead(that.soupResponse.statusCode,
                         that.getModifiedSoupResponseHeaders(that.soupResponse.headers));
             }
-
-            that.onSoupData = function(chunk) {
-                that.soupData.write(chunk, that.soupDataLength, 'binary');
-                that.soupDataLength += Buffer.byteLength(chunk, 'binary');
-            };
-
-            that.onSoupEndTransform = function() {
-                var data = that.getModifiedSoupResponseData();
-                that.writeResponseHead();
-                if (that.soupDataLength > 0) {
-                    that.response.write(data);
-                }
-                that.response.end();
-            };
-
-            that.onSoupEnd = function() {
-                that.writeResponseHead();
-                if (that.soupDataLength > 0) {
-                    that.response.write(that.getSoupResponseData());
-                }
-                that.response.end();
-            };
-
-            that.shouldTransformData = function(headers) {
-                var textTypeRegex = /text/,
-                    applicationTypeRegex = /application/;
-
-                if (!headers['content-type']) {
-                    return true;
-                } else if (headers['content-type'].search(textTypeRegex) != -1) {
-                    return true;
-                } else if (headers['content-type'].search(applicationTypeRegex) != -1) {
-                    return true;
-                }
-
-                return false;
-            };
-
-            that.onSoupResponse = function(res) {
-                that.soupResponse = res;
-                var bufsize = res.headers['content-length']?parseInt(res.headers['content-length']):options.maxFileSize;
-                that.soupData = new Buffer(bufsize);
-                res.setEncoding('binary');
-                res.on('data', that.onSoupData);
-
-                if (that.shouldTransformData(res.headers)) {
-                    res.on('end', that.onSoupEndTransform);
-                } else {
-                    res.on('end', that.onSoupEnd);
-                }
-            };
-
-            that.onSoupError = function(error) {
-                console.log("error:"+error.message);
-                that.response.end("<html><body>Error while connecting to Soup:<div>" +
-                        error.message +
-                        "</div></body></html>");
-            };
 
             that.setEncodingToPlaintext = function(headers) {
                 headers['accept-encoding'] = 'identity';
@@ -155,6 +88,63 @@ var url = require('url'),
                 return headers;
             };
 
+            that.shouldTransformData = function(headers) {
+                var textTypeRegex = /text/,
+                    applicationTypeRegex = /application/;
+
+                if (!headers['content-type']) {
+                    return true;
+                } else if (headers['content-type'].search(textTypeRegex) != -1) {
+                    return true;
+                } else if (headers['content-type'].search(applicationTypeRegex) != -1) {
+                    return true;
+                }
+
+                return false;
+            };
+
+            that.onSoupData = function(chunk) {
+                that.soupData.write(chunk, that.soupDataLength, 'binary');
+                that.soupDataLength += Buffer.byteLength(chunk, 'binary');
+            };
+
+            that.onSoupEndTransform = function() {
+                var data = that.getModifiedSoupResponseData();
+                that.writeResponseHead();
+                if (that.soupDataLength > 0 && that.request.method != 'HEAD') {
+                    that.response.write(data);
+                }
+                that.response.end();
+            };
+
+            that.onSoupEnd = function() {
+                that.writeResponseHead();
+                if (that.soupDataLength > 0) {
+                    that.response.write(that.getSoupResponseData());
+                }
+                that.response.end();
+            };
+
+            that.onSoupResponse = function(res) {
+                that.soupResponse = res;
+                var bufsize = res.headers['content-length']?parseInt(res.headers['content-length']):options.maxFileSize;
+                that.soupData = new Buffer(bufsize);
+                res.setEncoding('binary');
+                res.on('data', that.onSoupData);
+
+                if (that.shouldTransformData(res.headers)) {
+                    res.on('end', that.onSoupEndTransform);
+                } else {
+                    res.on('end', that.onSoupEnd);
+                }
+            };
+
+            that.onSoupError = function(error) {
+                console.trace();
+                console.log("error:"+error.message);
+                that.response.end();
+            };
+
             that.onRequestData = function(chunk) {
                 that.proxy_request.write(chunk);
             };
@@ -163,22 +153,31 @@ var url = require('url'),
                 that.proxy_request.end();
             };
 
+            that.onRequestTimeout = function() {
+                console.error("aborting request");
+                that.proxy_request.abort();
+                that.response.end();
+            }
+
             that.respondeWithOriginalPage = function() {
                 var subDomain = that.getSubDomain();
                 subDomain = subDomain?subDomain + "." : "";
                 that.subDomain = subDomain;
 
-                console.log(that.request.method+" "+that.getSoupDomain()+" "+that.request.url);
-                that.proxy = http.createClient(80, that.getSoupDomain());
+                console.log(that.request.method+" "+that.getSoupDomain()+that.request.url);
                 var newHeaders = that.getModifiedSoupRequestHeader(that.request.headers);
-                that.proxy_request = that.proxy.request(
-                    that.request.method,
-                    that.request.url,
-                    newHeaders);
+                that.proxy_request = http.request({
+                    host: that.getSoupDomain(),
+                    port: 80,
+                    method: that.request.method,
+                    path: that.request.url,
+                    headers: newHeaders
+                });
 
-                that.request.setEncoding('binary');
+                that.proxy_request.setTimeout(options.timeout, that.onRequestTimeout);
                 that.proxy_request.on('response', that.onSoupResponse);
                 that.proxy_request.on('error', that.onSoupError);
+                that.request.setEncoding('binary');
                 that.request.on('data', that.onRequestData);
                 that.request.on('end', that.onRequestEnd);
             };
@@ -187,7 +186,6 @@ var url = require('url'),
                 that.respondeWithOriginalPage();
             } catch (e) {
                 console.error("error:" + e.message);
-                that.response.end();
             }
         };
     };

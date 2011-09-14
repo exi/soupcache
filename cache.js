@@ -29,11 +29,12 @@ var fs = require('fs'),
             },
             getFileBuffer: function(filename) {
                 var cacheName = options.cachePath + that.sanitizeFileName(filename);
-                var stat = fs.statSync(cacheName);
-                var fd = fs.openSync(cacheName, "r");
-                var buffer = new Buffer(parseInt(stat.size));
-                fs.readSync(fd, buffer, 0, buffer.length, 0);
-                fs.close(fd);
+                var buffer = new Buffer("");
+                try {
+                    buffer = fs.readFileSync(cacheName);
+                } catch (e) {
+                    console.error("error reading " + filename + ":" + e.message);
+                }
                 return buffer;
             }
         };
