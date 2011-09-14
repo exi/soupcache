@@ -61,7 +61,7 @@ var url = require('url'),
 
                 var newdata = that.soupData.toString();
                 newdata = newdata.replace(
-                        /asset\.soup\.io/g, "asset." + options.domain);
+                        /soup\.io/g, options.domain);
 
                 var buf = new Buffer(newdata);
                 that.soupDataLength = Buffer.byteLength(newdata, 'binary');
@@ -82,8 +82,7 @@ var url = require('url'),
                 var data = that.getModifiedSoupResponseData();
                 that.writeResponseHead();
                 if (that.soupDataLength > 0) {
-                    var pos = 0;
-                    console.log("write:"+that.response.write(data));
+                    that.response.write(data);
                 }
                 that.response.end();
             };
@@ -119,7 +118,6 @@ var url = require('url'),
                 res.on('data', that.onSoupData);
 
                 if (that.shouldTransformData(res.headers)) {
-                    console.log("transform");
                     res.on('end', that.onSoupEndTransform);
                 } else {
                     res.on('end', that.onSoupEnd);

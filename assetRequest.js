@@ -36,7 +36,7 @@ var url = require('url'),
             };
 
             that.respondeWithFile = function() {
-                //console.log("serve file " + that.getFileName());
+                console.log("serve file " + that.getFileName());
                 var fileBuffer = cacheHandler.getFileBuffer(that.getFileName());
                 that.response.writeHead(200, {
                     'Content-Type': cacheHandler.getFileMimeType(that.getFileName()),
