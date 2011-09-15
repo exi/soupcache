@@ -29,11 +29,11 @@ var fs = require('fs'),
             },
             getFileBuffer: function(filename) {
                 var cacheName = options.cachePath + that.sanitizeFileName(filename);
-                var buffer = new Buffer("");
+                var buffer = null;
                 try {
                     buffer = fs.readFileSync(cacheName);
                 } catch (e) {
-                    console.error("error reading " + filename + ":" + e.message);
+                    //file not found
                 }
                 return buffer;
             }

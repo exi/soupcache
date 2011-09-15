@@ -112,6 +112,7 @@ var mod = function(options) {
                 var data = that.getModifiedSoupResponseData();
                 that.writeResponseHead();
                 if (that.soupDataLength > 0 && that.request.method != 'HEAD') {
+                    options.stats.dataCount[that.request.connection.remoteAddress] += that.soupDataLength;
                     that.response.write(data);
                 }
                 that.response.end();
@@ -120,7 +121,9 @@ var mod = function(options) {
             that.onSoupEnd = function() {
                 that.writeResponseHead();
                 if (that.soupDataLength > 0) {
-                    that.response.write(that.getSoupResponseData());
+                    var data = that.getSoupResponseData();
+                    options.stats.dataCount[that.request.connection.remoteAddress] += that.soupDataLength;
+                    that.response.write(data);
                 }
                 that.response.end();
             };
@@ -164,7 +167,6 @@ var mod = function(options) {
                 subDomain = subDomain?subDomain + "." : "";
                 that.subDomain = subDomain;
 
-                console.log(that.request.method+" "+that.getSoupDomain()+that.request.url);
                 var newHeaders = that.getModifiedSoupRequestHeader(that.request.headers);
                 that.proxy_request = http.request({
                     host: that.getSoupDomain(),
