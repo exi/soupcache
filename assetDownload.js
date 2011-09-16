@@ -15,6 +15,7 @@ var assetDownload = function(mirror, url, options, callback) {
     that.fileBuffer = null;
     that.fileWritten = 0;
     that.fileSize = 0;
+    that.idleDate = new Date();
 
     that.finish = function() {
         var newbuf = new Buffer(that.fileBuffer).slice(0, that.fileWritten);
@@ -26,8 +27,10 @@ var assetDownload = function(mirror, url, options, callback) {
     }
 
     that.getStatus = function() {
-        return that.currentMirror + that.url + " " + (that.tries + 1) + " tries " +
-            that.fileWritten + "/" + that.fileSize + " " + that.getStatusBar();
+        var waitingTime = (Date.parse(new Date()) - Date.parse(that.idleDate)) / 1000;
+        waitingTime = Math.floor(waitingTime / 10) * 10;
+        return that.currentMirror + that.url + " \t" + (that.tries + 1) + " tries \t" +
+            waitingTime + "s \t" + that.fileWritten + "/" + that.fileSize + " \t" + that.getStatusBar();
     }
 
     that.getStatusBar = function() {
@@ -65,14 +68,15 @@ var assetDownload = function(mirror, url, options, callback) {
     that.onError = function(error) {
         console.trace();
         console.log("error: " + error.message);
-        console.log("retry");
         that.tries++;
-        that.fetchFileAndFinish();
+        console.log("retry(" + that.tries + ")");
+        setTimeout(that.fetchFileAndFinish, 500);
     };
 
     that.onFileData = function(chunk) {
         that.fileBuffer.write(chunk, that.fileWritten, 'binary');
         that.fileWritten += Buffer.byteLength(chunk, 'binary');
+        that.idleDate = new Date();
     }
 
     that.onFileEnd = function() {

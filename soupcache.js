@@ -16,6 +16,14 @@ var url = require('url'),
         timeout: 5000 //5s
     };
 
+options.assetLoader = new assetLoader(options);
+options.stats = { dataCount:{}};
+http.globalAgent.maxSockets = 50;
+
+// we need this because the browsers will expect port numbers
+options.domain = options.domain + ":" + options.port;
+
+
 var onRequest = function(request, response) {
     var assetRegex = new RegExp(".*\.asset\." + options.domain),
         assetRequestHandler = assetRequest(options),
@@ -31,14 +39,9 @@ var onRequest = function(request, response) {
     }
 };
 
-options.assetLoader = new assetLoader(options);
-options.stats = { dataCount:{}};
-http.globalAgent.maxSockets = 50;
-
-// we need this because the browsers will expect port numbers
-options.domain = options.domain + ":" + options.port;
-
 var statusProvider = [];
+
+statusProvider.push(options.assetLoader.getStatus);
 
 statusProvider.push(function() {
     var convertToHumanReadable = function(bytes) {
@@ -54,12 +57,19 @@ statusProvider.push(function() {
     };
 
     var status = "";
-    for (var i in options.stats.dataCount) {
-        status += i + " " + convertToHumanReadable(options.stats.dataCount[i]) + "\n";
+    if (Object.keys(options.stats.dataCount).length > 0) {
+        var processed = 0;
+        for (var i in options.stats.dataCount) {
+            var lineend = Object.keys(options.stats.dataCount).length - 1 == processed?"":"\n";
+            status += i + " " + convertToHumanReadable(options.stats.dataCount[i]) + lineend;
+            processed++;
+        }
+    } else {
+        status += "no clients yet";
     }
+
     return status;
 });
-statusProvider.push(options.assetLoader.getStatus);
 
 statPrinter(statusProvider);
 

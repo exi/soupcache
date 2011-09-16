@@ -1,15 +1,23 @@
 var mod = function(statusProvider) {
     var that = this;
     that.statusProvider = statusProvider;
+    that.lastOutput = "";
 
     that.print = function() {
-        console.log("-------------");
+        var output = "";
         for (var i in that.statusProvider) {
-            console.log(that.statusProvider[i]());
+            var lineend = i < that.statusProvider.length - 1?"\n":"";
+            output += that.statusProvider[i]() + lineend;
+        }
+
+        if (output != that.lastOutput) {
+            console.log("------" + new Date() + "-------");
+            console.log(output);
+            that.lastOutput = output;
         }
     }
 
-    setInterval(that.print, 1000);
+    setInterval(that.print, 250);
 }
 
 module.exports = mod;

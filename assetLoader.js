@@ -45,13 +45,18 @@ var mod = function(options) {
 
     that.getStatus = function() {
         var status = "";
-        status += "downloaded: " + that.downloadCount + "\n";
+        status += "downloaded: " + that.downloadCount;
         if (Object.keys(that.activeDownloads).length > 0) {
+            status += "\n";
             status += "active downloads:" + "\n";
+            var processed = 0;
             for (var i in that.activeDownloads) {
-                status += that.callbacks[i].length + " clients: " + that.activeDownloads[i].getStatus() + "\n";
+                var lineend = Object.keys(that.activeDownloads).length - 1 == processed?"":"\n";
+                status += that.callbacks[i].length + " clients: " + that.activeDownloads[i].getStatus() + lineend;
+                processed++;
             }
         }
+
         return status;
     }
 };

@@ -49,14 +49,17 @@ var mod = function(options) {
             };
 
             that.getModifiedSoupResponseData = function() {
+                if (that.soupDataLength > 0) {
+                    var newdata = that.soupData.toString();
+                    newdata = newdata.replace(
+                            /soup\.io/g, options.domain);
 
-                var newdata = that.soupData.toString();
-                newdata = newdata.replace(
-                        /soup\.io/g, options.domain);
-
-                var buf = new Buffer(newdata);
-                that.soupDataLength = buf.length;
-                return buf;
+                    var buf = new Buffer(newdata);
+                    that.soupDataLength = buf.length;
+                    return buf;
+                } else {
+                    return new Buffer('');
+                }
             };
 
             that.writeResponseHead = function() {
@@ -120,7 +123,7 @@ var mod = function(options) {
 
             that.onSoupEnd = function() {
                 that.writeResponseHead();
-                if (that.soupDataLength > 0) {
+                if (that.soupDataLength > 0 && that.request.method != 'HEAD') {
                     var data = that.getSoupResponseData();
                     options.stats.dataCount[that.request.connection.remoteAddress] += that.soupDataLength;
                     that.response.write(data);
@@ -130,7 +133,7 @@ var mod = function(options) {
 
             that.onSoupResponse = function(res) {
                 that.soupResponse = res;
-                var bufsize = res.headers['content-length']?parseInt(res.headers['content-length']):options.maxFileSize;
+                var bufsize = res.headers['content-length']?parseInt(res.headers['content-length']):0;
                 that.soupData = new Buffer(bufsize);
                 res.setEncoding('binary');
                 res.on('data', that.onSoupData);
