@@ -6,38 +6,84 @@ var url = require('url'),
 var assetDownload = function(mirror, url, options, callback) {
     var that = this;
 
-    that.mirrors = [mirror];
-    that.currentMirror = "";
-    that.options = options;
-    that.url = url;
-    that.callback = callback;
-    that.tries = 0;
-    that.fileBuffer = null;
-    that.fileWritten = 0;
-    that.fileSize = 0;
-    that.idleDate = new Date();
+    var mirrors = [mirror];
+    var currentMirror = "";
+    var tries = 0;
+    var fileBuffer = null;
+    var fileWritten = 0;
+    var fileSize = 0;
+    var idleDate = new Date();
+    var soupRequest = null;
 
-    that.finish = function() {
-        var newbuf = new Buffer(that.fileBuffer).slice(0, that.fileWritten);
-        that.callback(that.url, newbuf);
-    };
+    var fetchFileAndFinish = function() {
+        var mirror = getMirror();;
+        currentMirror = mirror;
 
-    that.getMirror = function() {
-        return that.mirrors[that.tries % that.mirrors.length];
+        soupRequest = http.get({
+                host: mirror,
+                port: 80,
+                path: url
+            },
+            onFetchResponse);
+        soupRequest.on('error', onError);
+        soupRequest.setTimeout(options.timeout, onRequestTimeout);
     }
 
+    var getMirror = function() {
+        return mirrors[tries % mirrors.length];
+    }
+
+    var onFetchResponse = function(res) {
+        res.setEncoding('binary');
+        var contentLength = parseInt(res.headers['content-length']);
+        fileSize = contentLength;
+        fileBuffer = new Buffer(contentLength);
+        res.on('error', onError);
+        res.on('data', onFileData);
+        res.on('end', onFileEnd);
+    }
+
+    var onRequestTimeout = function() {
+        console.log("timeout...retry");
+        fetchFileAndFinish();
+    }
+
+    var onError = function(error) {
+        console.trace();
+        console.log("error: " + error.message);
+        tries++;
+        console.log("retry(" + tries + ")");
+        setTimeout(fetchFileAndFinish, 500);
+    };
+
+    var onFileData = function(chunk) {
+        fileBuffer.write(chunk, fileWritten, 'binary');
+        fileWritten += Buffer.byteLength(chunk, 'binary');
+        idleDate = new Date();
+    }
+
+    var onFileEnd = function() {
+        finish();
+    }
+
+
+    var finish = function() {
+        var newbuf = new Buffer(fileBuffer).slice(0, fileWritten);
+        callback(url, newbuf);
+    };
+
     that.getStatus = function() {
-        var waitingTime = (Date.parse(new Date()) - Date.parse(that.idleDate)) / 1000;
+        var waitingTime = (Date.parse(new Date()) - Date.parse(idleDate)) / 1000;
         waitingTime = Math.floor(waitingTime / 10) * 10;
-        return that.currentMirror + that.url + " \t" + (that.tries + 1) + " tries \t" +
-            waitingTime + "s \t" + that.fileWritten + "/" + that.fileSize + " \t" + that.getStatusBar();
+        return currentMirror + url + " \t" + (tries + 1) + " tries \t" +
+            waitingTime + "s \t" + fileWritten + "/" + fileSize + " \t" + that.getStatusBar();
     }
 
     that.getStatusBar = function() {
         var bar = "[";
-        if (that.fileSize > 0) {
+        if (fileSize > 0) {
             for (var pos = 0; pos < 20; pos++) {
-                if ((that.fileWritten / that.fileSize) * 20 >= pos) {
+                if ((fileWritten / fileSize) * 20 >= pos) {
                     bar += "#";
                 } else {
                     bar += " ";
@@ -50,58 +96,11 @@ var assetDownload = function(mirror, url, options, callback) {
         return bar;
     }
 
-    that.onFetchResponse = function(res) {
-        res.setEncoding('binary');
-        var contentLength = parseInt(res.headers['content-length']);
-        that.fileSize = contentLength;
-        that.fileBuffer = new Buffer(contentLength);
-        res.on('error', that.onError);
-        res.on('data', that.onFileData);
-        res.on('end', that.onFileEnd);
-    }
-
-    that.onRequestTimeout = function() {
-        console.log("timeout...retry");
-        that.fetchFileAndFinish();
-    }
-
-    that.onError = function(error) {
-        console.trace();
-        console.log("error: " + error.message);
-        that.tries++;
-        console.log("retry(" + that.tries + ")");
-        setTimeout(that.fetchFileAndFinish, 500);
-    };
-
-    that.onFileData = function(chunk) {
-        that.fileBuffer.write(chunk, that.fileWritten, 'binary');
-        that.fileWritten += Buffer.byteLength(chunk, 'binary');
-        that.idleDate = new Date();
-    }
-
-    that.onFileEnd = function() {
-        that.finish();
-    }
-
     that.addMirror = function(host) {
-        that.mirrors.push(host);
+        mirrors.push(host);
     }
 
-    that.fetchFileAndFinish = function() {
-        var mirror = that.getMirror();;
-        that.currentMirror = mirror;
-
-        that.soupRequest = http.get({
-            host: mirror,
-            port: 80,
-            path: that.url
-        },
-        that.onFetchResponse);
-        that.soupRequest.on('error', that.onError);
-        that.soupRequest.setTimeout(that.options.timeout, that.onRequestTimeout);
-    }
-
-    that.fetchFileAndFinish();
+    fetchFileAndFinish();
 };
 
 module.exports = assetDownload;
