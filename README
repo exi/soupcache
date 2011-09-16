@@ -1,0 +1,1 @@
+this nodejs server proxys requests to soup.io and caches all asset pictures to enhance the soup speed.
