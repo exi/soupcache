@@ -1,1 +1,8 @@
 this nodejs server proxys requests to soup.io and caches all asset pictures to enhance the soup speed.
+
+
+TODO:
+stream incoming data to the disk instead of putting it all into the ram first
+fix problems which cause nodejs to segfault (sic)
+fix issue with non-working "maximize picture" links
+inject a 2-click solution into the html to allow for reposts
