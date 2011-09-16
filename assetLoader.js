@@ -11,17 +11,13 @@ var mod = function(options) {
     var callbacks = {};
     var downloadCount = 0;
 
-    var onDownloadComplete = function(url, buffer) {
-        downloadCount++;
-        cacheHandler.insert(url, buffer);
-        var mimeType = cacheHandler.getFileMimeType(url);
-
-        for (var i in callbacks[url]) {
-            callbacks[url][i](buffer, mimeType);
+    that.download = function(host, url, callback) {
+        var buf = cacheHandler.getFileBuffer(url);
+        if (buf === null) {
+            _download(host, url, callback);
+        } else {
+            callback(buf);
         }
-
-        delete callbacks[url];
-        delete activeDownloads[url];
     };
 
     var _download = function(host, url, callback) {
@@ -34,13 +30,17 @@ var mod = function(options) {
         }
     };
 
-    that.download = function(host, url, callback) {
-        var buf = cacheHandler.getFileBuffer(url);
-        if (buf === null) {
-            _download(host, url, callback);
-        } else {
-            callback(buf);
+    var onDownloadComplete = function(url, buffer) {
+        downloadCount++;
+        cacheHandler.insert(url, buffer);
+        var mimeType = cacheHandler.getFileMimeType(url);
+
+        for (var i in callbacks[url]) {
+            callbacks[url][i](buffer, mimeType);
         }
+
+        delete callbacks[url];
+        delete activeDownloads[url];
     };
 
     that.getStatus = function() {
