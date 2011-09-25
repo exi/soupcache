@@ -52,7 +52,7 @@ var mod = function(options) {
                 if (that.soupDataLength > 0) {
                     var buf = null;
                     var newdata = that.soupData.toString();
-                    if (newdata.search(/<\/html>/) != -1) {
+                    if (newdata.search(/<li\ class/) != -1) {
                         var lines = newdata.split("\n");
                         for (var i in lines) {
                             if (lines[i].search(/Permalink/) == -1) {
