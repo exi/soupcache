@@ -10,8 +10,8 @@ var url = require('url'),
     options = {
         domain: "soup.wthack.de",
         port: 1234,
-        cachePath: './cache/',
-        loadingCachePath: './cache/loading/',
+        cachePath: './psauxcache/',
+        loadingCachePath: './psauxcache/loading/',
         maxFileSize: 52428800, //50MB
         timeout: 5000 //5s
     };
@@ -44,6 +44,7 @@ var statusProvider = [];
 statusProvider.push(options.assetLoader.getStatus);
 
 statusProvider.push(function() {
+    var maxLines = 8;
     var convertToHumanReadable = function(bytes) {
         var factors = [[1, 'B'], [1024, 'KB'], [1048576, 'MB'], [1073741824, 'GB']];
         var ret = "";
@@ -56,13 +57,23 @@ statusProvider.push(function() {
         return ret;
     };
 
+    var dataArray = [];
+
+    for (var i in options.stats.dataCount) {
+        dataArray.push(i);
+    }
+
+    var byteSort = function(a, b) {
+        return options.stats.dataCount[b] - options.stats.dataCount[a];
+    }
+
+    dataArray.sort(byteSort);
+
     var status = "";
-    if (Object.keys(options.stats.dataCount).length > 0) {
-        var processed = 0;
-        for (var i in options.stats.dataCount) {
-            var lineend = Object.keys(options.stats.dataCount).length - 1 == processed?"":"\n";
-            status += i + " " + convertToHumanReadable(options.stats.dataCount[i]) + lineend;
-            processed++;
+    if (dataArray.length > 0) {
+        for (var i = 0; i < Math.min(dataArray.length, maxLines); i++) {
+            var lineend = i == maxLines - 1?"":"\n";
+            status += dataArray[i] + " " + convertToHumanReadable(options.stats.dataCount[dataArray[i]]) + lineend;
         }
     } else {
         status += "no clients yet";

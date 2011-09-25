@@ -7,13 +7,11 @@ var mod = function(options) {
         var cacheHandler = cache(options);
         return function(request, response) {
             var that = this;
-            that.request = request;
-            that.response = response;
 
             that.getSubDomain = function() {
                 var subDomainRegex = new RegExp("(.*)\." + options.domain + ".*"),
                     results = null;
-                results = that.request.headers.host.match(subDomainRegex);
+                results = request.headers.host.match(subDomainRegex);
                 if (results && results[1]) {
                     return results[1];
                 } else {
@@ -27,17 +25,17 @@ var mod = function(options) {
             };
 
             that.getAssetPath = function() {
-                return that.request.url;
+                return request.url;
             };
 
             that.respondeWithFile = function(buffer, contentType) {
-                that.response.writeHead(200, {
+                response.writeHead(200, {
                     'Content-Type': contentType,
                     'Content-Length': buffer.length,
                     'Cache-Control': 'max-age=2592000' //30 days
                 });
-                options.stats.dataCount[that.request.connection.remoteAddress] += buffer.length;
-                that.response.end(buffer, 'binary');
+                options.stats.dataCount[request.connection.remoteAddress] += buffer.length;
+                response.end(buffer, 'binary');
             };
 
             that.fetchFileAndResponde = function() {
@@ -45,6 +43,7 @@ var mod = function(options) {
             };
 
             that.fetchFileAndResponde();
+
         };
     };
 

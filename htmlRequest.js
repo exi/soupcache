@@ -50,17 +50,31 @@ var mod = function(options) {
 
             that.getModifiedSoupResponseData = function() {
                 if (that.soupDataLength > 0) {
+                    var buf = null;
                     var newdata = that.soupData.toString();
-                    newdata = newdata.replace(
-                            /soup\.io/g, options.domain);
+                    if (newdata.search(/<\/html>/) != -1) {
+                        var lines = newdata.split("\n");
+                        for (var i in lines) {
+                            if (lines[i].search(/Permalink/) == -1) {
+                                lines[i] = replaceSoupLinksInString(lines[i]);
+                            }
+                        }
 
-                    var buf = new Buffer(newdata);
+                        buf = new Buffer(lines.join("\n"));
+                    } else {
+                        buf = new Buffer(replaceSoupLinksInString(newdata));
+                    }
+
                     that.soupDataLength = buf.length;
                     return buf;
                 } else {
                     return new Buffer('');
                 }
             };
+
+            var replaceSoupLinksInString = function(inputdata) {
+                return inputdata.replace(/soup\.io/g, options.domain);
+            }
 
             that.writeResponseHead = function() {
                 that.response.writeHead(that.soupResponse.statusCode,
