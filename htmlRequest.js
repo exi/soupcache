@@ -52,15 +52,10 @@ var mod = function(options) {
                 if (that.soupDataLength > 0) {
                     var buf = null;
                     var newdata = that.soupData.toString();
-                    if (newdata.search(/<li\ class/) != -1) {
-                        var lines = newdata.split("\n");
-                        for (var i in lines) {
-                            if (lines[i].search(/Permalink/) == -1) {
-                                lines[i] = replaceSoupLinksInString(lines[i]);
-                            }
-                        }
-
-                        buf = new Buffer(lines.join("\n"));
+                    if (isRss(newdata)) {
+                        buf = modifyRssAndReturnBuffer(newdata);
+                    } else if (isHtml(newdata)) {
+                        buf = modifyHtmlAndReturnBuffer(newdata);
                     } else {
                         buf = new Buffer(replaceSoupLinksInString(newdata));
                     }
@@ -72,8 +67,40 @@ var mod = function(options) {
                 }
             };
 
+            var isHtml = function(inputdata) {
+                return inputdata.search(/<li\ class/) != -1;
+            }
+
+            var isRss = function(inputdata) {
+                return inputdata.search(/<rss/) != -1;
+            }
+
             var replaceSoupLinksInString = function(inputdata) {
                 return inputdata.replace(/soup\.io/g, options.domain);
+            }
+
+            var modifyHtmlAndReturnBuffer = function(inputdata) {
+                var lines = inputdata.split("\n");
+                for (var i in lines) {
+                    if (lines[i].search(/Permalink/) == -1) {
+                        lines[i] = replaceSoupLinksInString(lines[i]);
+                    }
+                }
+
+                return new Buffer(lines.join("\n"));
+            }
+
+            var modifyRssAndReturnBuffer = function(inputdata) {
+                inputdata = inputdata.replace(/<link>/g, "\n<link>").replace(/<\/link>/g, "</link>\n");
+                var lines = inputdata.split("\n");
+                for (var i in lines) {
+                    if (lines[i].search(/<link>/) == -1 &&
+                        lines[i].search(/soup:attributes/) == -1) {
+                        lines[i] = replaceSoupLinksInString(lines[i]);
+                    }
+                }
+
+                return new Buffer(lines.join("\n"));
             }
 
             that.writeResponseHead = function() {
