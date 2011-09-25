@@ -4,7 +4,7 @@ var url = require('url'),
     server = null,
     onRequest = null,
     assetRequest = require('assetRequest.js'),
-    htmlRequest = require('htmlRequest.js'),
+    nonAssetRequest = require('nonAssetRequest.js'),
     assetLoader = require('assetLoader.js'),
     statPrinter = require('statPrinter.js'),
     options = {
@@ -27,7 +27,7 @@ options.domain = options.domain + ":" + options.port;
 var onRequest = function(request, response) {
     var assetRegex = new RegExp(".*\.asset\." + options.domain),
         assetRequestHandler = assetRequest(options),
-        htmlRequestHandler = htmlRequest(options);
+        nonAssetRequestHandler = nonAssetRequest(options);
     if (!options.stats.dataCount[request.connection.remoteAddress]) {
         options.stats.dataCount[request.connection.remoteAddress] = 0;
     }
@@ -35,7 +35,7 @@ var onRequest = function(request, response) {
     if (request.headers.host && request.headers.host.match(assetRegex)) {
         new assetRequestHandler(request, response);
     } else {
-        new htmlRequestHandler(request, response);
+        new nonAssetRequestHandler(request, response);
     }
 };
 
