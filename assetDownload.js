@@ -14,6 +14,7 @@ var assetDownload = function(mirror, url, options, callback) {
     var fileSize = 0;
     var idleDate = new Date();
     var soupRequest = null;
+    var statusCode = 200;
 
     var fetchFileAndFinish = function() {
         var mirror = getMirror();;
@@ -38,6 +39,7 @@ var assetDownload = function(mirror, url, options, callback) {
         var contentLength = parseInt(res.headers['content-length']);
         fileSize = contentLength;
         fileBuffer = new Buffer(contentLength);
+        statusCode = res.statusCode;
         res.on('error', onError);
         res.on('data', onFileData);
         res.on('end', onFileEnd);
@@ -69,7 +71,7 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var finish = function() {
         var newbuf = new Buffer(fileBuffer).slice(0, fileWritten);
-        callback(url, newbuf);
+        callback(url, newbuf, statusCode);
     };
 
     that.getStatus = function() {

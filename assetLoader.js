@@ -10,13 +10,16 @@ var mod = function(options) {
     var activeDownloads = {};
     var callbacks = {};
     var downloadCount = 0;
+    var htmlReturns = 0;
 
     that.download = function(host, url, callback) {
         var buf = cacheHandler.getFileBuffer(url);
         if (buf === null) {
             _download(host, url, callback);
         } else {
-            callback(buf);
+            cacheHandler.getFileMimeType(url, function(mimeType) {
+                callback(buf, mimeType, 200);
+            });
         }
     };
 
@@ -30,22 +33,31 @@ var mod = function(options) {
         }
     };
 
-    var onDownloadComplete = function(url, buffer) {
+    var onDownloadComplete = function(url, buffer, httpStatusCode) {
         downloadCount++;
         cacheHandler.insert(url, buffer);
-        var mimeType = cacheHandler.getFileMimeType(url);
+        cacheHandler.getFileMimeType(url, function(mimeType) {
+            for (var i in callbacks[url]) {
+                callbacks[url][i](buffer, mimeType, httpStatusCode);
+            }
 
-        for (var i in callbacks[url]) {
-            callbacks[url][i](buffer, mimeType);
-        }
+            delete callbacks[url];
+            delete activeDownloads[url];
 
-        delete callbacks[url];
-        delete activeDownloads[url];
+            if (mimeType.search(/text/) != -1) {
+                // we don't want to cache text files but the mimetype library does not support buffers so we put it on disk,
+                // lookup the mimetype and remove it again...
+                cacheHandler.remove(url);
+                htmlReturns++;
+            }
+        });
+
     };
 
     that.getStatus = function() {
         var status = "";
-        status += "downloaded: " + downloadCount;
+        status += "downloaded: " + downloadCount + "\n";
+        status += "html returns: " + htmlReturns;
         if (Object.keys(activeDownloads).length > 0) {
             status += "\n";
             status += "active downloads:" + "\n";

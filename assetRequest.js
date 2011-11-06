@@ -28,8 +28,8 @@ var mod = function(options) {
                 return request.url;
             };
 
-            that.respondeWithFile = function(buffer, contentType) {
-                response.writeHead(200, {
+            that.respondeWithFile = function(buffer, contentType, httpStatusCode) {
+                response.writeHead(httpStatusCode, {
                     'Content-Type': contentType,
                     'Content-Length': buffer.length,
                     'Cache-Control': 'max-age=2592000' //30 days

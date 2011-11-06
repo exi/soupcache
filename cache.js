@@ -1,5 +1,5 @@
 var fs = require('fs'),
-    mime = require('mime'),
+    mime = require('mime-magic'),
     api = function(options) {
         var that = this;
 
@@ -23,9 +23,25 @@ var fs = require('fs'),
                 fs.writeFileSync(loadingName, buffer, 0, buffer.length, 0, 'binary');
                 fs.renameSync(loadingName, cacheName);
             },
-            getFileMimeType: function(filename) {
+            remove: function(filename) {
                 var cacheName = options.cachePath + that.sanitizeFileName(filename);
-                return mime.lookup(cacheName);
+                try {
+                    fs.unlink(cacheName);
+                } catch (e) {
+                    //file not found
+                    console.error(e);
+                }
+            },
+            getFileMimeType: function(filename, callback) {
+                var cacheName = options.cachePath + that.sanitizeFileName(filename);
+                mime.fileWrapper(cacheName, function(err, type) {
+                    if (err) {
+                        // assume text/html
+                        callback('text/html');
+                    } else {
+                        callback(type);
+                    }
+                });
             },
             getFileBuffer: function(filename) {
                 var cacheName = options.cachePath + that.sanitizeFileName(filename);
