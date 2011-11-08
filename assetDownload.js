@@ -1,4 +1,4 @@
-var url = require('url'),
+var Url = require('url'),
     http = require('http'),
     cache = require('cache.js'),
     util = require('util');
@@ -15,6 +15,9 @@ var assetDownload = function(mirror, url, options, callback) {
     var idleDate = new Date();
     var soupRequest = null;
     var statusCode = 200;
+    var originalUrl = url;
+    var redirects = 0;
+    var maxRedirects = 10;
 
     var fetchFileAndFinish = function() {
         var mirror = getMirror();;
@@ -34,15 +37,37 @@ var assetDownload = function(mirror, url, options, callback) {
         return mirrors[tries % mirrors.length];
     }
 
+    var getUrl = function(href) {
+        var newUrl = Url.parse(href);
+        return newUrl.pathname + (newUrl.search || '');
+    };
+
+    var getHostname = function(href) {
+        var newUrl = Url.parse(href);
+        return newUrl.hostname;
+    };
+
     var onFetchResponse = function(res) {
-        res.setEncoding('binary');
-        var contentLength = parseInt(res.headers['content-length']);
-        fileSize = contentLength;
-        fileBuffer = new Buffer(contentLength);
-        statusCode = res.statusCode;
-        res.on('error', onError);
-        res.on('data', onFileData);
-        res.on('end', onFileEnd);
+        if (res.statusCode == 302 &&
+                redirects < maxRedirects &&
+                originalUrl != getUrl(res.headers.location)) {
+            var location = res.headers.location;
+            url = getUrl(location);
+            mirrors = [getHostname(location)];
+            redirects++;
+            options.stats.redirects++;
+
+            fetchFileAndFinish();
+        } else {
+            res.setEncoding('binary');
+            var contentLength = parseInt(res.headers['content-length']);
+            fileSize = contentLength;
+            fileBuffer = new Buffer(contentLength);
+            statusCode = res.statusCode;
+            res.on('error', onError);
+            res.on('data', onFileData);
+            res.on('end', onFileEnd);
+        }
     }
 
     var onRequestTimeout = function() {
@@ -71,7 +96,7 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var finish = function() {
         var newbuf = new Buffer(fileBuffer).slice(0, fileWritten);
-        callback(url, newbuf, statusCode);
+        callback(originalUrl, newbuf, statusCode);
     };
 
     that.getStatus = function() {

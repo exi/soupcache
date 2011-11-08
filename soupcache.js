@@ -17,7 +17,7 @@ var url = require('url'),
     };
 
 options.assetLoader = new assetLoader(options);
-options.stats = { dataCount:{}};
+options.stats = { dataCount: {}, redirects: 0 };
 http.globalAgent.maxSockets = 50;
 
 // we need this because the browsers will expect port numbers
@@ -42,6 +42,10 @@ var onRequest = function(request, response) {
 var statusProvider = [];
 
 statusProvider.push(options.assetLoader.getStatus);
+
+statusProvider.push(function() {
+    return 'Redirects: ' + options.stats.redirects || 0;
+});
 
 statusProvider.push(function() {
     var maxLines = 8;
