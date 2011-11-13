@@ -10,7 +10,7 @@ var mod = function(options) {
     var activeDownloads = {};
     var callbacks = {};
     var downloadCount = 0;
-    var htmlReturns = 0;
+    var notCached = 0;
 
     that.download = function(host, url, callback) {
         var buf = cacheHandler.getFileBuffer(url);
@@ -44,11 +44,11 @@ var mod = function(options) {
             delete callbacks[url];
             delete activeDownloads[url];
 
-            if (mimeType.search(/text/) != -1) {
+            if (mimeType.search(/text/) != -1 || httpStatusCode < 200 || httpStatusCode >= 300) {
                 // we don't want to cache text files but the mimetype library does not support buffers so we put it on disk,
                 // lookup the mimetype and remove it again...
                 cacheHandler.remove(url);
-                htmlReturns++;
+                notCached++;
             }
         });
 
@@ -57,7 +57,7 @@ var mod = function(options) {
     that.getStatus = function() {
         var status = "";
         status += "downloaded: " + downloadCount + "\n";
-        status += "html returns: " + htmlReturns;
+        status += "not cached: " + notCached;
         if (Object.keys(activeDownloads).length > 0) {
             status += "\n";
             status += "active downloads:" + "\n";

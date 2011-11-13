@@ -13,7 +13,7 @@ var url = require('url'),
         cachePath: './psauxcache/',
         loadingCachePath: './psauxcache/loading/',
         maxFileSize: 52428800, //50MB
-        timeout: 5000 //5s
+        timeout: 30000 //30s
     };
 
 options.assetLoader = new assetLoader(options);
@@ -41,11 +41,11 @@ var onRequest = function(request, response) {
 
 var statusProvider = [];
 
-statusProvider.push(options.assetLoader.getStatus);
-
 statusProvider.push(function() {
-    return 'Redirects: ' + options.stats.redirects || 0;
+    return 'redirects: ' + options.stats.redirects || 0;
 });
+
+statusProvider.push(options.assetLoader.getStatus);
 
 statusProvider.push(function() {
     var maxLines = 8;

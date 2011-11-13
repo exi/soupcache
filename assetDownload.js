@@ -19,8 +19,17 @@ var assetDownload = function(mirror, url, options, callback) {
     var redirects = 0;
     var maxRedirects = 10;
 
+    var resetValues = function() {
+        fileSize = 0;
+        fileWritten = 0;
+        fileBuffer = null;
+        tries = null;
+        soupRequest = null;
+    };
+
     var fetchFileAndFinish = function() {
-        var mirror = getMirror();;
+        resetValues();
+        var mirror = getMirror();
         currentMirror = mirror;
 
         soupRequest = http.get({
@@ -48,16 +57,25 @@ var assetDownload = function(mirror, url, options, callback) {
     };
 
     var onFetchResponse = function(res) {
-        if (res.statusCode == 302 &&
-                redirects < maxRedirects &&
-                originalUrl != getUrl(res.headers.location)) {
-            var location = res.headers.location;
-            url = getUrl(location);
-            mirrors = [getHostname(location)];
-            redirects++;
-            options.stats.redirects++;
+        if (res.statusCode >= 300 && res.statusCode < 400) {
+            if (originalUrl == getUrl(res.headers.location)) {
+                console.error("endless redirect detected...");
+                errorFinish();
+            } else if (redirects < maxRedirects) {
+                var location = res.headers.location;
 
-            fetchFileAndFinish();
+                url = getUrl(location);
+                mirrors = [getHostname(location)];
+
+                redirects++;
+                options.stats.redirects++;
+
+                fetchFileAndFinish();
+            } else {
+                console.error("aborting asset request because of too many redirects");
+                soupRequest.abort();
+                errorFinish();
+            }
         } else {
             res.setEncoding('binary');
             var contentLength = parseInt(res.headers['content-length']);
@@ -77,26 +95,50 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var onError = function(error) {
         console.trace();
-        console.log("error: " + error.message);
+        console.error("error: " + error.message);
         tries++;
-        console.log("retry(" + tries + ")");
+        console.error("retry(" + tries + ") " + url);
         setTimeout(fetchFileAndFinish, 500);
     };
 
     var onFileData = function(chunk) {
-        fileBuffer.write(chunk, fileWritten, 'binary');
-        fileWritten += Buffer.byteLength(chunk, 'binary');
-        idleDate = new Date();
+        try {
+            fileBuffer.write(chunk, fileWritten, 'binary');
+            fileWritten += Buffer.byteLength(chunk, 'binary');
+            idleDate = new Date();
+        } catch (e) {
+            console.error("error: " + e.message);
+            console.trace();
+            console.error("fileWritten: " + fileWritten);
+            console.error("fileSize: " + fileSize);
+            console.error("bufferlength: " + fileBuffer.length);
+            errorFinish();
+        }
     }
 
     var onFileEnd = function() {
         finish();
     }
 
-
     var finish = function() {
-        var newbuf = new Buffer(fileBuffer).slice(0, fileWritten);
-        callback(originalUrl, newbuf, statusCode);
+        try {
+            var newbuf = new Buffer(fileBuffer).slice(0, fileWritten);
+            callback(originalUrl, newbuf, statusCode);
+        } catch (e) {
+            console.error("error: " + e.message);
+            console.trace();
+            console.error("fileWritten: " + fileWritten);
+            console.error("fileSize: " + fileSize);
+            console.error("bufferlength: " + fileBuffer.length);
+            errorFinish();
+        }
+    };
+
+    var errorFinish = function() {
+        console.error("errorFinish");
+        console.trace();
+        var newbuf = new Buffer(0);
+        callback(originalUrl, newbuf, 500);
     };
 
     that.getStatus = function() {

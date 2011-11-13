@@ -5,10 +5,12 @@ var url = require('url'),
 var mod = function(options) {
         return function(request, response) {
             var that = this;
+            var maxTries = 5;
             that.request = request;
             that.response = response;
             that.soupData = null;
             that.soupDataLength = 0;
+            that.tries = 0;
 
             that.getSubDomain = function() {
                 var subDomainRegex = new RegExp("(.*)\." + options.domain + ".*"),
@@ -148,8 +150,13 @@ var mod = function(options) {
             };
 
             that.onSoupData = function(chunk) {
-                that.soupData.write(chunk, that.soupDataLength, 'binary');
-                that.soupDataLength += Buffer.byteLength(chunk, 'binary');
+                try {
+                    that.soupData.write(chunk, that.soupDataLength, 'binary');
+                    that.soupDataLength += Buffer.byteLength(chunk, 'binary');
+                } catch (e) {
+                    console.trace();
+                    console.error(e.message);
+                }
             };
 
             that.onSoupEndTransform = function() {
@@ -174,10 +181,14 @@ var mod = function(options) {
 
             that.onSoupResponse = function(res) {
                 that.soupResponse = res;
-                var bufsize = res.headers['content-length']?parseInt(res.headers['content-length']):0;
+                var bufsize = 0;
+                if (res.headers['content-length']) {
+                    bufsize = res.headers['content-length']?parseInt(res.headers['content-length']):0;
+                    res.on('data', that.onSoupData);
+                }
+
                 that.soupData = new Buffer(bufsize);
                 res.setEncoding('binary');
-                res.on('data', that.onSoupData);
 
                 if (that.shouldTransformData(res.headers)) {
                     res.on('end', that.onSoupEndTransform);
@@ -187,9 +198,19 @@ var mod = function(options) {
             };
 
             that.onSoupError = function(error) {
-                console.trace();
-                console.log("error:"+error.message);
-                that.response.end();
+                if (that.tries < maxTries) {
+                    that.tries++;
+                    console.trace();
+                    console.error("error(" + error.code + "): " + error.message);
+                    console.error(
+                        "retry(" + that.tries + ") " +
+                        that.request.headers.host + that.request.url
+                    );
+                    setTimeout(that.respondeWithOriginalPage, 500);
+                } else {
+                    console.error("aborting non asset request after " + that.tries + " tries");
+                    that.response.end();
+                }
             };
 
             that.onRequestData = function(chunk) {
@@ -201,7 +222,7 @@ var mod = function(options) {
             };
 
             that.onRequestTimeout = function() {
-                console.error("aborting request");
+                console.error("aborting non asset request due to timeout");
                 that.proxy_request.abort();
                 that.response.end();
             }
