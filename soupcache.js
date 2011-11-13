@@ -5,6 +5,7 @@ var url = require('url'),
     onRequest = null,
     assetRequest = require('assetRequest.js'),
     nonAssetRequest = require('nonAssetRequest.js'),
+    loginRequest = require('loginRequest.js'),
     assetLoader = require('assetLoader.js'),
     statPrinter = require('statPrinter.js'),
     options = {
@@ -26,13 +27,17 @@ options.domain = options.domain + ":" + options.port;
 
 var onRequest = function(request, response) {
     var assetRegex = new RegExp(".*\.asset\." + options.domain),
-        assetRequestHandler = assetRequest(options),
-        nonAssetRequestHandler = nonAssetRequest(options);
+        loginRegex = new RegExp("\/login"),
+        assetRequestHandler = new assetRequest(options),
+        nonAssetRequestHandler = new nonAssetRequest(options);
+        loginRequestHandler = new loginRequest(options);
     if (!options.stats.dataCount[request.connection.remoteAddress]) {
         options.stats.dataCount[request.connection.remoteAddress] = 0;
     }
 
-    if (request.headers.host && request.headers.host.match(assetRegex)) {
+    if (request.url && request.url.match(loginRegex)) {
+        new loginRequestHandler(request, response);
+    } else if (request.headers.host && request.headers.host.match(assetRegex)) {
         new assetRequestHandler(request, response);
     } else {
         new nonAssetRequestHandler(request, response);
