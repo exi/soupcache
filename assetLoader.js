@@ -61,6 +61,7 @@ var mod = function(options) {
         var status = "";
         status += "assets served: " + servedCount + "\n";
         status += "downloaded: " + downloadCount + "\n";
+        status += "cache efficiency: " + Math.round((servedCount / downloadCount) * 1000) /1000+ "\n";
         status += "soup server errors: " + soupErrors;
         if (Object.keys(activeDownloads).length > 0) {
             status += "\n";
