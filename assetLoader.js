@@ -11,6 +11,7 @@ var mod = function(options) {
     var callbacks = {};
     var downloadCount = 0;
     var notCached = 0;
+    var servedCount = 0;
 
     that.download = function(host, url, callback) {
         var buf = cacheHandler.getFileBuffer(url);
@@ -19,6 +20,7 @@ var mod = function(options) {
         } else {
             cacheHandler.getFileMimeType(url, function(mimeType) {
                 callback(buf, mimeType, 200);
+                servedCount++;
             });
         }
     };
@@ -35,6 +37,7 @@ var mod = function(options) {
 
     var onDownloadComplete = function(url, buffer, httpStatusCode) {
         downloadCount++;
+        servedCount++;
         cacheHandler.insert(url, buffer);
         cacheHandler.getFileMimeType(url, function(mimeType) {
             for (var i in callbacks[url]) {
@@ -56,6 +59,7 @@ var mod = function(options) {
 
     that.getStatus = function() {
         var status = "";
+        status += "assets served: " + servedCount + "\n";
         status += "downloaded: " + downloadCount + "\n";
         status += "not cached: " + notCached;
         if (Object.keys(activeDownloads).length > 0) {
