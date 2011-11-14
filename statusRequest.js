@@ -7,8 +7,8 @@ var mod = function(options) {
                     '       window.location.reload(true)' +
                     '   }, 2000);' +
                     '</script>';
-            html += "</head><body>" + options.statPrinter.getStatus() + "</body></html>";
-            html = html.replace(/\n/g, "<br/>");
+            html += "</head><body>" + options.statPrinter.getStatus().replace(/ /g, "&nbsp;").replace(/\n/g, "<br/>") +
+                    "</body></html>";
             response.writeHead(200, {
                 'Content-Length': html.length,
                 'Content-Type': 'text/html'

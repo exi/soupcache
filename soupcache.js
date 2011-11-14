@@ -63,7 +63,7 @@ statusProvider.push(function() {
         var factors = [[1, 'B'], [1024, 'KB'], [1048576, 'MB'], [1073741824, 'GB']];
         var ret = "";
         for (var i = 0; i<factors.length; i++) {
-            if (i+1 >= factors.length || (bytes>factors[i][0] && bytes<factors[i+1][0])) {
+            if (i+1 >= factors.length || (bytes>factors[i][0] && bytes<factors[i+1][0]) || bytes == 0) {
                 ret = Math.floor(bytes/(factors[i][0])) + factors[i][1];
                 break;
             }
@@ -78,7 +78,7 @@ statusProvider.push(function() {
     }
 
     var byteSort = function(a, b) {
-        return options.stats.dataCount[b] - options.stats.dataCount[a];
+        return parseInt(options.stats.dataCount[b]) - parseInt(options.stats.dataCount[a]);
     }
 
     var anonymizeIP = function(ip) {
