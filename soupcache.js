@@ -6,6 +6,7 @@ var url = require('url'),
     assetRequest = require('assetRequest.js'),
     nonAssetRequest = require('nonAssetRequest.js'),
     loginRequest = require('loginRequest.js'),
+    statusRequest = require('statusRequest.js'),
     assetLoader = require('assetLoader.js'),
     statPrinter = require('statPrinter.js'),
     options = {
@@ -27,16 +28,20 @@ options.domain = options.domain + ":" + options.port;
 
 var onRequest = function(request, response) {
     var assetRegex = new RegExp(".*\.asset\." + options.domain),
+        statusRegex = new RegExp("status\." + options.domain),
         loginRegex = new RegExp("\/login"),
         assetRequestHandler = new assetRequest(options),
-        nonAssetRequestHandler = new nonAssetRequest(options);
-        loginRequestHandler = new loginRequest(options);
+        nonAssetRequestHandler = new nonAssetRequest(options),
+        loginRequestHandler = new loginRequest(options),
+        statusRequestHandler = new statusRequest(options);
     if (!options.stats.dataCount[request.connection.remoteAddress]) {
         options.stats.dataCount[request.connection.remoteAddress] = 0;
     }
 
     if (request.url && request.url.match(loginRegex)) {
         new loginRequestHandler(request, response);
+    } else if (request.headers.host && request.headers.host.match(statusRegex)) {
+        new statusRequestHandler(request, response);
     } else if (request.headers.host && request.headers.host.match(assetRegex)) {
         new assetRequestHandler(request, response);
     } else {
@@ -76,13 +81,20 @@ statusProvider.push(function() {
         return options.stats.dataCount[b] - options.stats.dataCount[a];
     }
 
+    var anonymizeIP = function(ip) {
+        var lastDot = ip.lastIndexOf(".");
+        return ip.substr(0, lastDot) + "\.*";
+    }
+
     dataArray.sort(byteSort);
 
     var status = "";
     if (dataArray.length > 0) {
         for (var i = 0; i < Math.min(dataArray.length, maxLines); i++) {
             var lineend = i == maxLines - 1?"":"\n";
-            status += dataArray[i] + " " + convertToHumanReadable(options.stats.dataCount[dataArray[i]]) + lineend;
+            status += anonymizeIP(dataArray[i]) +
+                      " " +
+                      convertToHumanReadable(options.stats.dataCount[dataArray[i]]) + lineend;
         }
     } else {
         status += "no clients yet";
@@ -91,6 +103,6 @@ statusProvider.push(function() {
     return status;
 });
 
-statPrinter(statusProvider);
+options.statPrinter = new statPrinter(statusProvider);
 
 server = http.createServer(onRequest).listen(options.port);

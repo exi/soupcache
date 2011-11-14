@@ -10,7 +10,7 @@ var mod = function(options) {
     var activeDownloads = {};
     var callbacks = {};
     var downloadCount = 0;
-    var notCached = 0;
+    var soupErrors = 0;
     var servedCount = 0;
 
     that.download = function(host, url, callback) {
@@ -51,7 +51,7 @@ var mod = function(options) {
                 // we don't want to cache text files but the mimetype library does not support buffers so we put it on disk,
                 // lookup the mimetype and remove it again...
                 cacheHandler.remove(url);
-                notCached++;
+                soupErrors++;
             }
         });
 
@@ -61,7 +61,7 @@ var mod = function(options) {
         var status = "";
         status += "assets served: " + servedCount + "\n";
         status += "downloaded: " + downloadCount + "\n";
-        status += "not cached: " + notCached;
+        status += "soup server errors: " + soupErrors;
         if (Object.keys(activeDownloads).length > 0) {
             status += "\n";
             status += "active downloads:" + "\n";

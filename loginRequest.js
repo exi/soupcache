@@ -1,4 +1,3 @@
-
 var mod = function(options) {
         return function(request, response) {
             var html = "<html><body>Sorry, but for privacy reasons, we can't allow a login through the proxy</body></html>";

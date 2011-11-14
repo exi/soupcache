@@ -1,23 +1,33 @@
 var mod = function(statusProvider) {
-    var that = this;
-    that.statusProvider = statusProvider;
-    that.lastOutput = "";
+    var lastOutput = "";
 
-    that.print = function() {
+    var getOutput = function() {
         var output = "";
-        for (var i in that.statusProvider) {
-            var lineend = i < that.statusProvider.length - 1?"\n":"";
-            output += that.statusProvider[i]() + lineend;
+
+        for (var i in statusProvider) {
+            var lineend = i < statusProvider.length - 1?"\n":"";
+            output += statusProvider[i]() + lineend;
         }
 
-        if (output != that.lastOutput) {
+        return output
+    }
+
+    var print = function() {
+        var output = getOutput();
+        if (output != lastOutput) {
             console.log("------" + new Date() + "-------");
             console.log(output);
-            that.lastOutput = output;
+            lastOutput = output;
         }
     }
 
-    setInterval(that.print, 250);
+    setInterval(print, 250);
+
+    return {
+        getStatus: function() {
+            return getOutput();
+        }
+    }
 }
 
 module.exports = mod;
