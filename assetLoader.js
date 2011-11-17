@@ -48,8 +48,6 @@ var mod = function(options) {
     };
 
     var onDownloadComplete = function(url, buffer, httpStatusCode) {
-        downloadCount++;
-        servedCount++;
         cacheHandler.insert(url, buffer);
         cacheHandler.getFileMimeType(url, function(mimeType) {
             for (var i in callbacks[url]) {
@@ -64,6 +62,9 @@ var mod = function(options) {
                 // lookup the mimetype and remove it again...
                 cacheHandler.remove(url);
                 soupErrors++;
+            } else {
+                downloadCount++;
+                servedCount++;
             }
         });
 
@@ -82,7 +83,7 @@ var mod = function(options) {
                 averageResponseTime += responseTimes[i];
             }
             averageResponseTime /= responseDataSize;
-            status += "average soup asset response time: " + Math.floor(averageResponseTime*1000)/1000 + "ms\n";
+            status += "average soup asset download time: " + Math.floor(averageResponseTime*1000)/1000 + "ms\n";
         }
         if (Object.keys(activeDownloads).length > 0) {
             status += "\n";

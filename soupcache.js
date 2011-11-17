@@ -58,7 +58,7 @@ statusProvider.push(function() {
 statusProvider.push(options.assetLoader.getStatus);
 
 statusProvider.push(function() {
-    var maxLines = 8;
+    var maxLines = 10;
     var convertToHumanReadable = function(bytes) {
         var factors = [[1, 'B'], [1024, 'KB'], [1048576, 'MB'], [1073741824, 'GB']];
         var ret = "";
@@ -89,6 +89,10 @@ statusProvider.push(function() {
     dataArray.sort(byteSort);
 
     var status = "";
+
+    status += dataArray.length + " clients seen\n";
+    status += "Top " + maxLines + " users:\n";
+
     if (dataArray.length > 0) {
         for (var i = 0; i < Math.min(dataArray.length, maxLines); i++) {
             var lineend = i == maxLines - 1?"":"\n";
