@@ -84,7 +84,7 @@ var mod = function(options) {
                 averageResponseTime += responseTimes[i];
             }
             averageResponseTime /= responseDataSize;
-            status += "average soup asset download time: " + Math.floor(averageResponseTime*1000)/1000 + "ms\n";
+            status += "average soup asset download time: " + Math.floor(averageResponseTime*1000)/1000 + "ms";
         }
         if (Object.keys(activeDownloads).length > 0) {
             status += "\n";
