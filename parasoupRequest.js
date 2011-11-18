@@ -13,6 +13,7 @@ var mod = function(options) {
                         'Content-Type': 'text/plain'
                     });
                     clients[i].response.end(response);
+                    options.stats.parasoups++;
                 } catch(e) {
                     //dont care
                 }

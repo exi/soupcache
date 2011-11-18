@@ -34,7 +34,7 @@
 </script>
 </head>
 <body>
-pause with space, currently: <span id="paused">unpaused</span>
+pause with any key, currently: <span id="paused">unpaused</span>
 <div id="container"></div>
 <script type="text/javascript">
     var timer = null;
@@ -68,23 +68,27 @@ pause with space, currently: <span id="paused">unpaused</span>
                     } else if (paused) {
                         requestInProgress = false;
                     }
+                },
+                error: function(xhr, ajaxOptions, thrownError) {
+                    console.error(xhr);
+                    console.error(thrownError);
+                    requestInProgress = false;
+                    setTimeout(ajaxLoop, 1000);
                 }
             });
         }
     }
     var keyEvents = function() {
         $(document).keypress(function(evt) {
-            if (evt.which == 32) { //space
-                if (paused) {
-                    paused = false;
-                    ajaxLoop();
-                    $('#paused').text("unpaused");
-                } else {
-                    paused = true;
-                    if (timer) clearTimeout(timer);
-                    timer = null;
-                    $('#paused').text("paused");
-                }
+            if (paused) {
+                paused = false;
+                ajaxLoop();
+                $('#paused').text("unpaused");
+            } else {
+                paused = true;
+                if (timer) clearTimeout(timer);
+                timer = null;
+                $('#paused').text("paused");
             }
         });
     }

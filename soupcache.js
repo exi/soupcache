@@ -21,7 +21,7 @@ var url = require('url'),
     };
 
 options.assetLoader = new assetLoader(options);
-options.stats = { dataCount: {}, redirects: 0 };
+options.stats = { dataCount: {}, redirects: 0, parasoups: 0 };
 options.eventBus = new events.EventEmitter();
 http.globalAgent.maxSockets = 50;
 
@@ -98,6 +98,7 @@ statusProvider.push(function() {
 
     var status = "";
 
+    status += "parasoups served: " + options.stats.parasoups + "\n";
     status += dataArray.length + " clients seen\n";
     status += "Top " + maxLines + " users:\n";
 
