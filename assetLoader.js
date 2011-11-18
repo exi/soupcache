@@ -63,6 +63,7 @@ var mod = function(options) {
                 cacheHandler.remove(url);
                 soupErrors++;
             } else {
+                options.eventBus.emit('newAsset', url, buffer, mimeType);
                 downloadCount++;
                 servedCount++;
             }

@@ -7,8 +7,10 @@ var url = require('url'),
     nonAssetRequest = require('nonAssetRequest.js'),
     loginRequest = require('loginRequest.js'),
     statusRequest = require('statusRequest.js'),
+    parasoupRequest = require('parasoupRequest.js'),
     assetLoader = require('assetLoader.js'),
     statPrinter = require('statPrinter.js'),
+    events = new require('events'),
     options = {
         domain: "soup.wthack.de",
         port: 1234,
@@ -20,20 +22,24 @@ var url = require('url'),
 
 options.assetLoader = new assetLoader(options);
 options.stats = { dataCount: {}, redirects: 0 };
+options.eventBus = new events.EventEmitter();
 http.globalAgent.maxSockets = 50;
 
 // we need this because the browsers will expect port numbers
 options.domain = options.domain + ":" + options.port;
 
+var parasoupRequestHandler = new parasoupRequest(options);
 
 var onRequest = function(request, response) {
     var assetRegex = new RegExp(".*\.asset\." + options.domain),
         statusRegex = new RegExp("status\." + options.domain),
         loginRegex = new RegExp("\/login"),
+        parasoupRegex = new RegExp("parasoup\." + options.domain),
         assetRequestHandler = new assetRequest(options),
         nonAssetRequestHandler = new nonAssetRequest(options),
         loginRequestHandler = new loginRequest(options),
         statusRequestHandler = new statusRequest(options);
+
     if (!options.stats.dataCount[request.connection.remoteAddress]) {
         options.stats.dataCount[request.connection.remoteAddress] = 0;
     }
@@ -42,6 +48,8 @@ var onRequest = function(request, response) {
         new loginRequestHandler(request, response);
     } else if (request.headers.host && request.headers.host.match(statusRegex)) {
         new statusRequestHandler(request, response);
+    } else if (request.headers.host && request.headers.host.match(parasoupRegex)) {
+        new parasoupRequestHandler(request, response);
     } else if (request.headers.host && request.headers.host.match(assetRegex)) {
         new assetRequestHandler(request, response);
     } else {

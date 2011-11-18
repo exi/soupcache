@@ -1,0 +1,99 @@
+<html>
+<head>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+<script type="text/javascript">
+    (function ($) {
+        var imgList = [];
+        $.extend({
+            preload: function(imgArr, option) {
+                var setting = $.extend({
+                init: function(loaded, total) {},
+                loaded: function(img, loaded, total) {},
+                loaded_all: function(loaded, total) {}
+                }, option);
+                var total = imgArr.length;
+                var loaded = 0;
+
+                setting.init(0, total);
+                for(var i in imgArr) {
+                    imgList.push($("<img />")
+                    .attr("src", imgArr[i])
+                    .load(function() {
+                        loaded++;
+                        setting.loaded(this, loaded, total);
+                        if(loaded == total) {
+                            setting.loaded_all(loaded, total);
+                        }
+                    })
+                    );
+                }
+
+            }
+        });
+    })($);
+</script>
+</head>
+<body>
+pause with space, currently: <span id="paused">unpaused</span>
+<div id="container"></div>
+<script type="text/javascript">
+    var timer = null;
+    var paused = false;
+    var requestInProgress = false;
+    var nodes = [];
+    var ajaxLoop = function() {
+        if (!paused && !requestInProgress) {
+            requestInProgress = true;
+            $.ajax({
+                url: "http://parasoup.soup.wthack.de:1234/newStuff",
+                success: function(data, textStatus, xhr) {
+                    if (xhr.status == 200 && !paused) {
+                        if (nodes.length > 30) {
+                            while (nodes.length > 30) {
+                                $(nodes[0]).remove();
+                                nodes.splice(0, 1);
+                            }
+                        }
+                        $.preload([data], {
+                            loaded: function(img, loaded, total) {
+                                $(img).hide().css('float', 'left');
+                                $('#container').prepend(img);
+                                nodes.push(img);
+                                $(img).slideDown(1000, function() {
+                                    timer = setTimeout(ajaxLoop, 250);
+                                });
+                                requestInProgress = false;
+                            }
+                        });
+                    } else if (paused) {
+                        requestInProgress = false;
+                    }
+                }
+            });
+        }
+    }
+    var keyEvents = function() {
+        $(document).keypress(function(evt) {
+            if (evt.which == 32) { //space
+                if (paused) {
+                    paused = false;
+                    ajaxLoop();
+                    $('#paused').text("unpaused");
+                } else {
+                    paused = true;
+                    if (timer) clearTimeout(timer);
+                    timer = null;
+                    $('#paused').text("paused");
+                }
+            }
+        });
+    }
+$(
+function() {
+    ajaxLoop();
+    keyEvents();
+}
+);
+</script>
+</body>
+</html>

@@ -67,6 +67,7 @@ var fs = require('fs'),
             insert: function(filename, buffer) {
                 var loadingName = options.loadingCachePath + sanitizeFileName(filename),
                     cacheName = options.cachePath + sanitizeFileName(filename);
+
                 fs.writeFileSync(loadingName, buffer, 0, buffer.length, 0, 'binary');
                 fs.renameSync(loadingName, cacheName);
             },
