@@ -34,13 +34,15 @@
 </script>
 </head>
 <body>
-pause with any key, currently: <span id="paused">unpaused</span>
+pause with any key, currently: <span id="paused">unpaused</span>. you are here for: <span id="time"></span>
 <div id="container"></div>
 <script type="text/javascript">
     var timer = null;
     var paused = false;
     var requestInProgress = false;
     var nodes = [];
+    var maxEntries = 15;
+
     var ajaxLoop = function() {
         if (!paused && !requestInProgress) {
             requestInProgress = true;
@@ -48,11 +50,9 @@ pause with any key, currently: <span id="paused">unpaused</span>
                 url: "http://parasoup.soup.wthack.de:1234/newStuff",
                 success: function(data, textStatus, xhr) {
                     if (xhr.status == 200 && !paused) {
-                        if (nodes.length > 30) {
-                            while (nodes.length > 30) {
-                                $(nodes[0]).remove();
-                                nodes.splice(0, 1);
-                            }
+                        while (nodes.length > maxEntries) {
+                            $(nodes[0]).remove();
+                            nodes.splice(0, 1);
                         }
                         $.preload([data], {
                             loaded: function(img, loaded, total) {
@@ -78,6 +78,7 @@ pause with any key, currently: <span id="paused">unpaused</span>
             });
         }
     }
+
     var keyEvents = function() {
         $(document).keypress(function(evt) {
             if (paused) {
@@ -92,12 +93,35 @@ pause with any key, currently: <span id="paused">unpaused</span>
             }
         });
     }
-$(
-function() {
-    ajaxLoop();
-    keyEvents();
-}
-);
+
+    var printTime = function() {
+        var start = new Date();
+        var node = $('#time');
+        setInterval(function() {
+            var diff = ((new Date()) - start) / 1000;
+            var hours = 0,
+                minutes = 0,
+                seconds = 0;
+            hours = Math.floor(diff/(60*60));
+            diff %= (60*60);
+            minutes = Math.floor(diff/60);
+            diff %= (60);
+            seconds = Math.floor(diff);
+
+            var text = "";
+            if (hours > 0) text += hours + " hours ";
+            if (minutes > 0 || hours > 0) text += minutes + " minutes ";
+            if (seconds > 0 || minutes > 0 || hours > 0) text += seconds + " seconds.";
+            node.text(text);
+        }, 1000);
+    }
+    $(
+    function() {
+        ajaxLoop();
+        keyEvents();
+        printTime();
+    }
+    );
 </script>
 </body>
 </html>
