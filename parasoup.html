@@ -1,40 +1,9 @@
 <html>
 <head>
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
-<script type="text/javascript">
-    (function ($) {
-        var imgList = [];
-        $.extend({
-            preload: function(imgArr, option) {
-                var setting = $.extend({
-                init: function(loaded, total) {},
-                loaded: function(img, loaded, total) {},
-                loaded_all: function(loaded, total) {}
-                }, option);
-                var total = imgArr.length;
-                var loaded = 0;
-
-                setting.init(0, total);
-                for(var i in imgArr) {
-                    imgList.push($("<img />")
-                    .attr("src", imgArr[i])
-                    .load(function() {
-                        loaded++;
-                        setting.loaded(this, loaded, total);
-                        if(loaded == total) {
-                            setting.loaded_all(loaded, total);
-                        }
-                    })
-                    );
-                }
-
-            }
-        });
-    })($);
-</script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
 </head>
 <body>
-pause with any key, currently: <span id="paused">unpaused</span>. you are here for: <span id="time"></span>
+pause with any <u>letter</u>, currently: <span id="paused">unpaused</span>. you are here for: <span id="time"></span>
 <div id="container"></div>
 <script type="text/javascript">
     var timer = null;
@@ -54,17 +23,22 @@ pause with any key, currently: <span id="paused">unpaused</span>. you are here f
                             $(nodes[0]).remove();
                             nodes.splice(0, 1);
                         }
-                        $.preload([data], {
-                            loaded: function(img, loaded, total) {
-                                $(img).hide().css('float', 'left');
-                                $('#container').prepend(img);
-                                nodes.push(img);
-                                $(img).slideDown(1000, function() {
+                        $("<img />")
+                            .attr("src", data).
+                            load(function() {
+                                $(this).hide().css('float', 'left');
+                                $('#container').prepend(this);
+                                nodes.push(this);
+                                $(this).slideDown(1000, function() {
                                     timer = setTimeout(ajaxLoop, 250);
                                 });
                                 requestInProgress = false;
-                            }
-                        });
+                            })
+                            .error(function() {
+                                $(this).remove();
+                                timer = setTimeout(ajaxLoop, 250);
+                                requestInProgress = false;
+                            });
                     } else if (paused) {
                         requestInProgress = false;
                     }
@@ -81,16 +55,18 @@ pause with any key, currently: <span id="paused">unpaused</span>. you are here f
 
     var keyEvents = function() {
         $(document).keypress(function(evt) {
-            if (paused) {
-                paused = false;
-                ajaxLoop();
-                $('#paused').text("unpaused");
-            } else {
-                paused = true;
-                if (timer) clearTimeout(timer);
-                timer = null;
-                $('#paused').text("paused");
-            }
+            if (evt.which >= 97 && evt.which <= 122) {
+                if (paused) {
+                    paused = false;
+                    ajaxLoop();
+                    $('#paused').text("unpaused");
+                } else {
+                    paused = true;
+                    if (timer) clearTimeout(timer);
+                    timer = null;
+                    $('#paused').text("paused");
+                }
+            } else console.log(evt);
         });
     }
 

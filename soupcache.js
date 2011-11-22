@@ -85,6 +85,13 @@ statusProvider.push(function() {
         dataArray.push(i);
     }
 
+    for (var i = 0; i < dataArray.length; i++) {
+        if (dataArray[i] == "" || typeof dataArray[i] == "undefined" || isNaN(options.stats.dataCount[dataArray[i]])) {
+            delete options.stats.dataCount[dataArray[i]];
+            dataArray.splice(i, 1);
+        }
+    }
+
     var byteSort = function(a, b) {
         return parseInt(options.stats.dataCount[b]) - parseInt(options.stats.dataCount[a]);
     }

@@ -57,7 +57,7 @@ var mod = function(options) {
             delete callbacks[url];
             delete activeDownloads[url];
 
-            if (mimeType.search(/text/) != -1 || httpStatusCode < 200 || httpStatusCode >= 300) {
+            if (mimeType.search(/application/) != -1 || mimeType.search(/text/) != -1 || httpStatusCode < 200 || httpStatusCode >= 300) {
                 // we don't want to cache text files but the mimetype library does not support buffers so we put it on disk,
                 // lookup the mimetype and remove it again...
                 cacheHandler.remove(url);

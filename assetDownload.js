@@ -80,7 +80,6 @@ var assetDownload = function(mirror, url, options, callback) {
             res.setEncoding('binary');
             var contentLength = parseInt(res.headers['content-length']);
             fileSize = contentLength;
-            fileBuffer = new Buffer(contentLength);
             statusCode = res.statusCode;
             res.on('error', onError);
             res.on('data', onFileData);
@@ -102,6 +101,10 @@ var assetDownload = function(mirror, url, options, callback) {
     };
 
     var onFileData = function(chunk) {
+        if (fileBuffer === null) {
+            fileBuffer = new Buffer(fileSize);
+        }
+
         try {
             fileBuffer.write(chunk, fileWritten, 'binary');
             fileWritten += Buffer.byteLength(chunk, 'binary');
@@ -127,9 +130,6 @@ var assetDownload = function(mirror, url, options, callback) {
         } catch (e) {
             console.error("error: " + e.message);
             console.trace();
-            console.error("fileWritten: " + fileWritten);
-            console.error("fileSize: " + fileSize);
-            console.error("bufferlength: " + fileBuffer.length);
             errorFinish();
         }
     };
