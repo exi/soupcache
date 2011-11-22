@@ -84,7 +84,7 @@ var mod = function(options) {
                 return inputdata.replace(/soup\.io/g, options.domain).
                     replace(/https:\/\//g, "http://").
                     replace(/SOUP\.Public\.storefront_host\.sub\(\':\.\*\',\'\'\)/,
-                        "SOUP.Public.storefront_host.sub(/:.*/,'')");
+                        "SOUP.Public.storefront_host.sub(/:.*/,'')"); // fix bug in soup javascript code... m)
             }
 
             var modifyHtmlAndReturnBuffer = function(inputdata) {
