@@ -1,5 +1,6 @@
 var url = require('url'),
     http = require('http'),
+    https = require('https'),
     util = require('util');
 
 var mod = function(options) {
@@ -28,11 +29,13 @@ var mod = function(options) {
             }
 
             that.getNewResponseLocationField = function(location) {
-                return location.replace(/soup\.io/, options.domain);
+                return location.replace(/soup\.io/, options.domain).
+                                replace(/https:\/\//, 'http://');
             };
 
             that.getModifiedSoupResponseHeaders = function(headers) {
                 var newheaders = {};
+
                 for (var i in headers) {
                     newheaders[i] = headers[i];
                 }
@@ -78,7 +81,10 @@ var mod = function(options) {
             }
 
             var replaceSoupLinksInString = function(inputdata) {
-                return inputdata.replace(/soup\.io/g, options.domain);
+                return inputdata.replace(/soup\.io/g, options.domain).
+                    replace(/https:\/\//g, "http://").
+                    replace(/SOUP\.Public\.storefront_host\.sub\(\':\.\*\',\'\'\)/,
+                        "SOUP.Public.storefront_host.sub(/:.*/,'')");
             }
 
             var modifyHtmlAndReturnBuffer = function(inputdata) {
@@ -227,19 +233,35 @@ var mod = function(options) {
                 that.response.end();
             }
 
+            var isHttpsLink = function(url) {
+                var loginRegex = new RegExp("\/login");
+                if (url.match(loginRegex)) return true;
+                return false;
+            }
+
             that.respondeWithOriginalPage = function() {
                 var subDomain = that.getSubDomain();
                 subDomain = subDomain?subDomain + "." : "";
                 that.subDomain = subDomain;
 
                 var newHeaders = that.getModifiedSoupRequestHeader(that.request.headers);
-                that.proxy_request = http.request({
-                    host: that.getSoupDomain(),
-                    port: 80,
-                    method: that.request.method,
-                    path: that.request.url,
-                    headers: newHeaders
-                });
+                if (request.url && isHttpsLink(request.url)) {
+                    that.proxy_request = https.request({
+                        host: that.getSoupDomain(),
+                        port: 443,
+                        method: that.request.method,
+                        path: that.request.url,
+                        headers: newHeaders
+                    });
+                } else {
+                    that.proxy_request = http.request({
+                        host: that.getSoupDomain(),
+                        port: 80,
+                        method: that.request.method,
+                        path: that.request.url,
+                        headers: newHeaders
+                    });
+                };
 
                 that.proxy_request.setTimeout(options.timeout, that.onRequestTimeout);
                 that.proxy_request.on('response', that.onSoupResponse);

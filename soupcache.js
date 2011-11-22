@@ -12,7 +12,7 @@ var url = require('url'),
     statPrinter = require('statPrinter.js'),
     events = new require('events'),
     options = {
-        domain: "soup.wthack.de",
+        domainPrefix: "soup.wthack.de",
         port: 1234,
         cachePath: './psauxcache/',
         loadingCachePath: './psauxcache/loading/',
@@ -26,14 +26,13 @@ options.eventBus = new events.EventEmitter();
 http.globalAgent.maxSockets = 50;
 
 // we need this because the browsers will expect port numbers
-options.domain = options.domain + ":" + options.port;
+options.domain = options.domainPrefix + ":" + options.port;
 
 var parasoupRequestHandler = new parasoupRequest(options);
 
 var onRequest = function(request, response) {
     var assetRegex = new RegExp(".*\.asset\." + options.domain),
         statusRegex = new RegExp("status\." + options.domain),
-        loginRegex = new RegExp("\/login"),
         parasoupRegex = new RegExp("parasoup\." + options.domain),
         assetRequestHandler = new assetRequest(options),
         nonAssetRequestHandler = new nonAssetRequest(options),
@@ -44,9 +43,7 @@ var onRequest = function(request, response) {
         options.stats.dataCount[request.connection.remoteAddress] = 0;
     }
 
-    if (request.url && request.url.match(loginRegex)) {
-        new loginRequestHandler(request, response);
-    } else if (request.headers.host && request.headers.host.match(statusRegex)) {
+    if (request.headers.host && request.headers.host.match(statusRegex)) {
         new statusRequestHandler(request, response);
     } else if (request.headers.host && request.headers.host.match(parasoupRegex)) {
         new parasoupRequestHandler(request, response);
