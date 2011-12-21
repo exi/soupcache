@@ -30,7 +30,7 @@ var fs = require('fs'),
         var sanitizeFileName = function(filename) {
             var hash = crypto.createHash("SHA1");
             hash.update(filename);
-            var filenameHash = hash.digest(encoding="hex");
+            var filenameHash = hash.digest("hex");
             var hashCut = filenameHash.substr(0, 2);
             return hashCut + "/" + encodeURIComponent(filename);
         };

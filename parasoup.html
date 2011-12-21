@@ -26,12 +26,18 @@ pause with any <u>letter</u>, currently: <span id="paused">unpaused</span>. you 
                         $("<img />")
                             .attr("src", data).
                             load(function() {
-                                $(this).hide().css('float', 'left');
-                                $('#container').prepend(this);
-                                nodes.push(this);
-                                $(this).slideDown(1000, function() {
-                                    timer = setTimeout(ajaxLoop, 250);
-                                });
+                                if (!paused) {
+                                    $(this).hide().css('float', 'left');
+                                    var a = $("<a />").
+                                    attr("href", "http://images.google.com/searchbyimage?image_url=" + data).
+                                    attr("target", "_blank").
+                                    prepend(this);
+                                    $('#container').prepend(a);
+                                    nodes.push(this);
+                                    $(this).slideDown(1000, function() {
+                                        timer = setTimeout(ajaxLoop, 250);
+                                    });
+                                }
                                 requestInProgress = false;
                             })
                             .error(function() {

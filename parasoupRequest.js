@@ -3,12 +3,12 @@ var mod = function(options) {
     var clients = [],
         assetCache = [],
         assetCacheFile = options.cachePath + "parasoupAssetCache.json",
-        getHtmlContent = function() { return fs.readFileSync("./parasoup.html", encoding='utf-8'); },
+        getHtmlContent = function() { return fs.readFileSync("./parasoup.html", 'utf-8'); },
         served = 0;
         stallTimer = null;
 
     options.eventBus.on('newAsset', function(url, buffer, contentType) {
-        if (buffer.length > 16 * 1024) {
+        if (buffer.length > 30 * 1024) {
             var data = {url: url};
             if (clients.length > 0) {
                 deliverToClients(data);
