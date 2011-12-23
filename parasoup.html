@@ -3,7 +3,8 @@
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
 </head>
 <body>
-pause with any <u>letter</u>, currently: <span id="paused">unpaused</span>. you are here for: <span id="time"></span>
+pause with any <u>letter</u>, click on images for similarity search, currently: <u><span id="paused">unpaused</span></u>.
+you are here for: <span id="time"></span> and watched <span id="items"></span> pictures;
 <div id="container"></div>
 <script type="text/javascript">
     var timer = null;
@@ -11,6 +12,7 @@ pause with any <u>letter</u>, currently: <span id="paused">unpaused</span>. you 
     var requestInProgress = false;
     var nodes = [];
     var maxEntries = 15;
+    var items = 0;
 
     var ajaxLoop = function() {
         if (!paused && !requestInProgress) {
@@ -35,6 +37,7 @@ pause with any <u>letter</u>, currently: <span id="paused">unpaused</span>. you 
                                     $('#container').prepend(a);
                                     nodes.push(this);
                                     $(this).slideDown(1000, function() {
+                                        items++;
                                         timer = setTimeout(ajaxLoop, 250);
                                     });
                                 }
@@ -76,9 +79,10 @@ pause with any <u>letter</u>, currently: <span id="paused">unpaused</span>. you 
         });
     }
 
-    var printTime = function() {
+    var printStatus = function() {
         var start = new Date();
-        var node = $('#time');
+        var timeNode = $('#time');
+        var itemNode = $('#items');
         setInterval(function() {
             var diff = ((new Date()) - start) / 1000;
             var hours = 0,
@@ -93,15 +97,20 @@ pause with any <u>letter</u>, currently: <span id="paused">unpaused</span>. you 
             var text = "";
             if (hours > 0) text += hours + " hours ";
             if (minutes > 0 || hours > 0) text += minutes + " minutes ";
-            if (seconds > 0 || minutes > 0 || hours > 0) text += seconds + " seconds.";
-            node.text(text);
+            if (seconds > 0 || minutes > 0 || hours > 0) text += seconds + " seconds";
+
+            timeNode.text(text);
+
+            itemNode.text(items);
+
+            document.title = text + ", " + items + " pictures";
         }, 1000);
     }
     $(
     function() {
         ajaxLoop();
         keyEvents();
-        printTime();
+        printStatus();
     }
     );
 </script>
