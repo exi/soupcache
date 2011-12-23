@@ -57,6 +57,15 @@ var onRequest = function(request, response) {
 var statusProvider = [];
 
 statusProvider.push(function() {
+    var start = new Date();
+    return function() {
+        var hours = Math.floor((new Date() - start) / 3600000 * 1000) / 1000;
+        var text = "------" + new Date() + "-------\n";
+        text += "running since " + start + " (" + hours + " h)";
+        return text;
+}}());
+
+statusProvider.push(function() {
     return 'redirects: ' + options.stats.redirects || 0;
 });
 

@@ -15,7 +15,6 @@ var mod = function(statusProvider) {
     var print = function() {
         var output = getOutput();
         if (output != lastOutput) {
-            console.log("------" + new Date() + "-------");
             console.log(output);
             lastOutput = output;
         }
