@@ -62,6 +62,7 @@ var mod = function(options) {
             var l = assetCache.length;
             // Take from the last 100 added, this ensures that the cache somehow reflects the current time of the day
             var index = l -  Math.floor(Math.random() * Math.min(l, 100));
+            index = Math.max(0, index);
             var data = assetCache[index];
             deliverToClients(data);
             assetCache.splice(index, 1);
