@@ -59,7 +59,9 @@ var mod = function(options) {
         removeStallTimer();
 
         if (assetCache.length > 0 && clients.length > 0) {
-            var index = Math.floor(Math.random()*assetCache.length);
+            var l = assetCache.length;
+            // Take from the last 100 added, this ensures that the cache somehow reflects the current time of the day
+            var index = l -  Math.floor(Math.random() * Math.min(l, 100));
             var data = assetCache[index];
             deliverToClients(data);
             assetCache.splice(index, 1);
@@ -78,7 +80,7 @@ var mod = function(options) {
 
     var resetStallTimer = function() {
         removeStallTimer();
-        stallTimer = setTimeout(onStallTimer, 2000);
+        stallTimer = setTimeout(onStallTimer, 1000);
     };
 
     var updateStats = function() {
@@ -87,6 +89,7 @@ var mod = function(options) {
     }
 
     loadCacheFromDisc();
+    resetStallTimer();
 
     return function(request, response) {
         if (request.url == "/newStuff") {
