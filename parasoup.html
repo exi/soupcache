@@ -3,9 +3,10 @@
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
 </head>
 <body>
-pause with any <u>letter</u>, click on images for similarity search, <a href="http://www.parasoup.de">click here to visit soup</a>, currently: <u><span id="paused">unpaused</span></u>.
+pause with any <u>letter</u>, click on images for similarity search, <button id="porn"></button><a href="http://www.parasoup.de">click here to visit soup</a>, currently: <u><span id="paused">unpaused</span></u>.
 you are here for: <span id="time"></span> and watched <span id="items"></span> pictures;
 <div id="container"></div>
+<iframe src="http://a.asset.parasoup.de:1234/nudejs.html" id="iframe" style="display: none"></iframe>
 <script type="text/javascript">
     var timer = null;
     var paused = false;
@@ -13,6 +14,45 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
     var nodes = [];
     var maxEntries = 15;
     var items = 0;
+    var iframe = document.getElementById("iframe").contentWindow;
+    var urls = {};
+    var porn = {};
+    var pfilter = false;
+
+    var continueLoop = function() {
+        timer = setTimeout(ajaxLoop, 250);
+    }
+
+    var showImage = function(img, notimer) {
+        img.slideDown(1000, function() {
+            items++;
+            if (!notimer) continueLoop();
+        });
+    }
+
+    var hideImage = function(img) {
+        img.slideUp(1000, function() {
+        });
+    }
+
+    var nudeCheckReceiver = function(result) {
+        if (result && result.data) {
+            var data = result.data;
+            if (data.url && urls.hasOwnProperty(data.url)) {
+                if (data.res === false) {
+                    showImage($(urls[data.url]));
+                } else {
+                    console.log(data);
+                    porn[data.url] = urls[data.url];
+                    continueLoop();
+                    updateFilterButton();
+                }
+                delete urls[data.url];
+            }
+        }
+    }
+
+    window.addEventListener("message", nudeCheckReceiver, false);
 
     var ajaxLoop = function() {
         if (!paused && !requestInProgress) {
@@ -22,9 +62,11 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
                 success: function(data, textStatus, xhr) {
                     if (xhr.status == 200 && !paused) {
                         while (nodes.length > maxEntries) {
+                            if (porn.hasOwnProperty($(nodes[0]).attr("src"))) delete porn[$(nodes[0]).attr("src")];
                             $(nodes[0]).remove();
                             nodes.splice(0, 1);
                         }
+                        updateFilterButton();
                         $("<img />")
                             .attr("src", data).
                             load(function() {
@@ -36,10 +78,12 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
                                     prepend(this);
                                     $('#container').prepend(a);
                                     nodes.push(this);
-                                    $(this).slideDown(1000, function() {
-                                        items++;
-                                        timer = setTimeout(ajaxLoop, 250);
-                                    });
+                                    if (pfilter === true) {
+                                        urls[data] = this;
+                                        iframe.postMessage(data, "http://a.asset.parasoup.de:1234");
+                                    } else {
+                                        showImage($(this));
+                                    }
                                 }
                                 requestInProgress = false;
                             })
@@ -106,13 +150,37 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
             document.title = text + ", " + items + " pictures";
         }, 1000);
     }
-    $(
-    function() {
+
+    var updateFilterButton = function() {
+        if (pfilter === true) {
+            var hidden = Object.keys(porn).length
+            $("#porn").text("don't hide Porn (" + hidden + " hidden)");
+        } else {
+            $("#porn").text("try to hide porn");
+        }
+    }
+
+    var registerFilter = function() {
+        $("#porn").click(function() {
+            if (pfilter === true) {
+                pfilter = false;
+                for (var i in porn) if (porn.hasOwnProperty(i)) showImage($(porn[i]));
+
+            } else {
+                pfilter = true;
+                for (var i in porn) if (porn.hasOwnProperty(i)) hideImage($(porn[i]));
+            }
+            updateFilterButton();
+        });
+        updateFilterButton();
+    }
+
+    $(function() {
         ajaxLoop();
         keyEvents();
         printStatus();
-    }
-    );
+        registerFilter();
+    });
 </script>
 </body>
 </html>
