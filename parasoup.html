@@ -61,7 +61,7 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
                 success: function(data, textStatus, xhr) {
                     if (xhr.status == 200 && !paused) {
                         while (nodes.length > maxEntries) {
-                            if (porn.hasOwnProperty($(nodes[0]).attr("src"))) delete porn[$(nodes[0]).attr("src")];
+                            //if (porn.hasOwnProperty($(nodes[0]).attr("src"))) delete porn[$(nodes[0]).attr("src")];
                             $(nodes[0]).remove();
                             nodes.splice(0, 1);
                         }
