@@ -1,4 +1,5 @@
 var fs = require('fs');
+var soupInterval = 2000; //2s
 var mod = function(options) {
     var clients = [],
         assetCache = [],
@@ -22,7 +23,7 @@ var mod = function(options) {
     });
 
     var deliverToClients = function(data) {
-        var response = "http://asset." + options.domain + data.url;
+        var response = "http://a.asset." + options.domain + data.url;
         for (var i = 0; i<clients.length; i++) {
             try{
                 clients[i].response.writeHead(200, {
@@ -81,7 +82,7 @@ var mod = function(options) {
 
     var resetStallTimer = function() {
         removeStallTimer();
-        stallTimer = setTimeout(onStallTimer, 1000);
+        stallTimer = setTimeout(onStallTimer, 2000);
     };
 
     var updateStats = function() {
@@ -99,7 +100,12 @@ var mod = function(options) {
                 response: response
             });
         } else {
-            response.end(getHtmlContent());
+            var html = getHtmlContent();
+            response.writeHead(200, {
+                'Content-Length': html.length,
+                'Content-Type': 'text/html'
+            });
+            response.end(html);
         }
     };
 };

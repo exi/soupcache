@@ -1,7 +1,7 @@
 var url = require('url'),
     http = require('http'),
-    cache = require('cache.js'),
-    assetDownload = require('assetDownload.js'),
+    cache = require('./cache.js'),
+    assetDownload = require('./assetDownload.js'),
     util = require('util');
 
 var mod = function(options) {

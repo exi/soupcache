@@ -1,6 +1,6 @@
 var Url = require('url'),
     http = require('http'),
-    cache = require('cache.js'),
+    cache = require('./cache.js'),
     util = require('util');
 
 var assetDownload = function(mirror, url, options, callback) {
@@ -39,7 +39,6 @@ var assetDownload = function(mirror, url, options, callback) {
             },
             onFetchResponse);
         soupRequest.on('error', onError);
-        soupRequest.setTimeout(options.timeout, onRequestTimeout);
     }
 
     var getMirror = function() {

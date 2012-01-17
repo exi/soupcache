@@ -263,7 +263,6 @@ var mod = function(options) {
                     });
                 };
 
-                that.proxy_request.setTimeout(options.timeout, that.onRequestTimeout);
                 that.proxy_request.on('response', that.onSoupResponse);
                 that.proxy_request.on('error', that.onSoupError);
                 that.request.setEncoding('binary');

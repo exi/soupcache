@@ -3,7 +3,7 @@
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
 </head>
 <body>
-pause with any <u>letter</u>, click on images for similarity search, currently: <u><span id="paused">unpaused</span></u>.
+pause with any <u>letter</u>, click on images for similarity search, <a href="http://www.parasoup.de">click here to visit soup</a>, currently: <u><span id="paused">unpaused</span></u>.
 you are here for: <span id="time"></span> and watched <span id="items"></span> pictures;
 <div id="container"></div>
 <script type="text/javascript">
@@ -18,7 +18,7 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
         if (!paused && !requestInProgress) {
             requestInProgress = true;
             $.ajax({
-                url: "http://parasoup.soup.wthack.de:1234/newStuff",
+                url: window.location + "newStuff",
                 success: function(data, textStatus, xhr) {
                     if (xhr.status == 200 && !paused) {
                         while (nodes.length > maxEntries) {

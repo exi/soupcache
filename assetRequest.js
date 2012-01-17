@@ -1,6 +1,6 @@
 var url = require('url'),
     http = require('http'),
-    cache = require('cache.js'),
+    cache = require('./cache.js'),
     util = require('util');
 
 var mod = function(options) {

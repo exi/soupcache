@@ -3,16 +3,16 @@ var url = require('url'),
     util = require('util'),
     server = null,
     onRequest = null,
-    assetRequest = require('assetRequest.js'),
-    nonAssetRequest = require('nonAssetRequest.js'),
-    loginRequest = require('loginRequest.js'),
-    statusRequest = require('statusRequest.js'),
-    parasoupRequest = require('parasoupRequest.js'),
-    assetLoader = require('assetLoader.js'),
-    statPrinter = require('statPrinter.js'),
+    assetRequest = require('./assetRequest.js'),
+    nonAssetRequest = require('./nonAssetRequest.js'),
+    loginRequest = require('./loginRequest.js'),
+    statusRequest = require('./statusRequest.js'),
+    parasoupRequest = require('./parasoupRequest.js'),
+    assetLoader = require('./assetLoader.js'),
+    statPrinter = require('./statPrinter.js'),
     events = new require('events'),
     options = {
-        domainPrefix: "soup.wthack.de",
+        domainPrefix: "parasoup.de",
         port: 1234,
         cachePath: './psauxcache/',
         loadingCachePath: './psauxcache/loading/',
@@ -23,7 +23,6 @@ var url = require('url'),
 options.assetLoader = new assetLoader(options);
 options.stats = { dataCount: {}, redirects: 0, parasoups: 0, parasoupAssetCache: 0 };
 options.eventBus = new events.EventEmitter();
-http.globalAgent.maxSockets = 50;
 
 // we need this because the browsers will expect port numbers
 options.domain = options.domainPrefix + ":" + options.port;
@@ -33,7 +32,7 @@ var parasoupRequestHandler = new parasoupRequest(options);
 var onRequest = function(request, response) {
     var assetRegex = new RegExp(".*\.asset\." + options.domain),
         statusRegex = new RegExp("status\." + options.domain),
-        parasoupRegex = new RegExp("parasoup\." + options.domain),
+        parasoupRegex = new RegExp("^" + options.domain + "$"),
         assetRequestHandler = new assetRequest(options),
         nonAssetRequestHandler = new nonAssetRequest(options),
         loginRequestHandler = new loginRequest(options),
@@ -55,15 +54,6 @@ var onRequest = function(request, response) {
 };
 
 var statusProvider = [];
-
-statusProvider.push(function() {
-    var start = new Date();
-    return function() {
-        var hours = Math.floor((new Date() - start) / 3600000 * 1000) / 1000;
-        var text = "------" + new Date() + "-------\n";
-        text += "running since " + start + " (" + hours + " h)";
-        return text;
-}}());
 
 statusProvider.push(function() {
     return 'redirects: ' + options.stats.redirects || 0;
@@ -113,19 +103,6 @@ statusProvider.push(function() {
 
     status += "parasoups served: " + options.stats.parasoups + "\n";
     status += "parasoup asset cache: " + options.stats.parasoupAssetCache + "\n";
-    status += dataArray.length + " clients seen\n";
-    status += "Top " + maxLines + " users:\n";
-
-    if (dataArray.length > 0) {
-        for (var i = 0; i < Math.min(dataArray.length, maxLines); i++) {
-            var lineend = i == maxLines - 1?"":"\n";
-            status += anonymizeIP(dataArray[i]) +
-                      " " +
-                      convertToHumanReadable(options.stats.dataCount[dataArray[i]]) + lineend;
-        }
-    } else {
-        status += "no clients yet";
-    }
 
     return status;
 });
