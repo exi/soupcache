@@ -13,10 +13,6 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
     var nodes = [];
     var maxEntries = 15;
     var items = 0;
-    //var iframe = document.getElementById("iframe").contentWindow;
-    //var urls = {};
-    //var porn = {};
-    //var pfilter = false;
 
     var continueLoop = function() {
         timer = setTimeout(ajaxLoop, 250);
@@ -34,24 +30,6 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
         });
     }
 
-    //var nudeCheckReceiver = function(result) {
-    //    if (result && result.data) {
-    //        var data = result.data;
-    //        if (data.url && urls.hasOwnProperty(data.url)) {
-    //            if (data.res === false) {
-    //                showImage($(urls[data.url]));
-    //            } else {
-    //                console.log(data);
-    //                porn[data.url] = urls[data.url];
-    //                continueLoop();
-    //                updateFilterButton();
-    //            }
-    //            delete urls[data.url];
-    //        }
-    //    }
-    //}
-
-    //window.addEventListener("message", nudeCheckReceiver, false);
 
     var ajaxLoop = function() {
         if (!paused && !requestInProgress) {
@@ -61,11 +39,10 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
                 success: function(data, textStatus, xhr) {
                     if (xhr.status == 200 && !paused) {
                         while (nodes.length > maxEntries) {
-                            if (porn.hasOwnProperty($(nodes[0]).attr("src"))) delete porn[$(nodes[0]).attr("src")];
                             $(nodes[0]).remove();
                             nodes.splice(0, 1);
                         }
-                        //updateFilterButton();
+
                         $("<img />")
                             .attr("src", data).
                             load(function() {
@@ -77,12 +54,7 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
                                     prepend(this);
                                     $('#container').prepend(a);
                                     nodes.push(this);
-                                    //if (pfilter === true) {
-                                    //    urls[data] = this;
-                                    //    iframe.postMessage(data, "http://a.asset.parasoup.de:1234");
-                                    //} else {
-                                        showImage($(this));
-                                    //}
+                                    showImage($(this));
                                 }
                                 requestInProgress = false;
                             })
@@ -150,35 +122,10 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
         }, 1000);
     }
 
-    //var updateFilterButton = function() {
-    //    if (pfilter === true) {
-    //        var hidden = Object.keys(porn).length
-    //        $("#porn").text("don't hide Porn (" + hidden + " hidden)");
-    //    } else {
-    //        $("#porn").text("try to hide porn");
-    //    }
-    //}
-
-    //var registerFilter = function() {
-    //    $("#porn").click(function() {
-    //        if (pfilter === true) {
-    //            pfilter = false;
-    //            for (var i in porn) if (porn.hasOwnProperty(i)) showImage($(porn[i]));
-
-    //        } else {
-    //            pfilter = true;
-    //            for (var i in porn) if (porn.hasOwnProperty(i)) hideImage($(porn[i]));
-    //        }
-    //        updateFilterButton();
-    //    });
-    //    updateFilterButton();
-    //}
-
     $(function() {
         ajaxLoop();
         keyEvents();
         printStatus();
-        //registerFilter();
     });
 </script>
 </body>
