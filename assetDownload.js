@@ -143,8 +143,9 @@ var assetDownload = function(mirror, url, options, callback) {
     that.getStatus = function() {
         var waitingTime = (Date.parse(new Date()) - Date.parse(idleDate)) / 1000;
         waitingTime = Math.floor(waitingTime / 10) * 10;
+        var mirrorsString = "[" + mirrors.join(",") + "]";
         return currentMirror + url + " \t" + (tries + 1) + " tries \t" +
-            waitingTime + "s \t" + fileWritten + "/" + fileSize + " \t" + that.getStatusBar();
+            waitingTime + "s \t" + fileWritten + "/" + fileSize + " \t mirrors:" + mirrorsString + "\t" + that.getStatusBar();
     }
 
     that.getStatusBar = function() {
@@ -165,6 +166,12 @@ var assetDownload = function(mirror, url, options, callback) {
     }
 
     that.addMirror = function(host) {
+        var l = mirrors.length;
+        for (var i = 0; i < l; i++) {
+            if (mirrors[i] === host) {
+                return;
+            }
+        }
         mirrors.push(host);
     }
 

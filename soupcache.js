@@ -13,7 +13,8 @@ var url = require('url'),
     events = new require('events'),
     options = {
         domainPrefix: "parasoup.de",
-        port: 1234,
+        ip: "188.40.102.160",
+        port: 80,
         cachePath: './psauxcache/',
         loadingCachePath: './psauxcache/loading/',
         maxFileSize: 52428800, //50MB
@@ -25,7 +26,8 @@ options.stats = { dataCount: {}, redirects: 0, parasoups: 0, parasoupAssetCache:
 options.eventBus = new events.EventEmitter();
 
 // we need this because the browsers will expect port numbers
-options.domain = options.domainPrefix + ":" + options.port;
+//options.domain = options.domainPrefix + ":" + options.port;
+options.domain = options.domainPrefix;
 
 var parasoupRequestHandler = new parasoupRequest(options);
 
@@ -109,4 +111,6 @@ statusProvider.push(function() {
 
 options.statPrinter = new statPrinter(statusProvider);
 
-server = http.createServer(onRequest).listen(options.port);
+server = http.createServer(onRequest).listen(options.port, options.ip, function() {
+    process.setuid('exi');
+});

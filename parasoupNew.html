@@ -7,10 +7,10 @@
         #slider { width: 250px;float: left; margin-right: 10px;}
     </style>
 </head>
-<body style="margin: 0;">
+<body>
 <div id="slider"></div>
-picture delay: <span id="delay"></span>, pause with any key,click image for search, <a href="http://www.parasoup.de">click here for soup</a>, <u><span id="paused">unpaused</span></u>.
-here for: <span id="time"></span>, watched <span id="items"></span> pictures
+picture delay: <span id="delay"></span>;pause with any <u>letter</u>,click on images for similarity search, <a href="http://www.parasoup.de">click here to visit soup</a>, currently: <u><span id="paused">unpaused</span></u>.
+you are here for: <span id="time"></span> and watched <span id="items"></span> pictures;
 <div id="container"></div>
 <script type="text/javascript">
     var Cache = function() {
@@ -148,22 +148,17 @@ here for: <span id="time"></span>, watched <span id="items"></span> pictures
                 $('#container').prepend(a);
                 nodes.push($(a));
                 showImage($(img));
+                console.log("a");
             } else {
+                console.log("no a");
                 continueLoop();
             }
         }
     }
 
-    var invalidKeys = [32, 33, 34, 35, 36, 38, 40, 144];
-    //f1...f12
-    for (var i = 112; i <= 123; i++) {
-        invalidKeys.push(i);
-    }
-
     var keyEvents = function() {
         $(document).keypress(function(evt) {
-            var key = evt.which || evt.keyCode;
-            if (invalidKeys.indexOf(key) === -1) {
+            if (evt.which >= 97 && evt.which <= 122) {
                 if (paused) {
                     paused = false;
                     loop();
@@ -174,7 +169,7 @@ here for: <span id="time"></span>, watched <span id="items"></span> pictures
                     timer = null;
                     $('#paused').text("paused");
                 }
-            } else console.log("ignore key: " + key);
+            } else console.log(evt);
         });
     }
 

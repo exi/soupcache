@@ -1,10 +1,11 @@
 var fs = require('fs');
-var soupInterval = 2000; //2s
+var soupInterval = 950;
 var mod = function(options) {
     var clients = [],
         assetCache = [],
         assetCacheFile = options.cachePath + "parasoupAssetCache.json",
         getHtmlContent = function() { return fs.readFileSync("./parasoup.html", 'utf-8'); },
+        getNewHtmlContent = function() { return fs.readFileSync("./parasoupNew.html", 'utf-8'); },
         served = 0;
         stallTimer = null;
 
@@ -82,7 +83,7 @@ var mod = function(options) {
 
     var resetStallTimer = function() {
         removeStallTimer();
-        stallTimer = setTimeout(onStallTimer, 2000);
+        stallTimer = setTimeout(onStallTimer, soupInterval);
     };
 
     var updateStats = function() {
@@ -99,6 +100,13 @@ var mod = function(options) {
                 request: request,
                 response: response
             });
+        } else if (request.url == "/newHTML") {
+            var html = getNewHtmlContent();
+            response.writeHead(200, {
+                'Content-Length': html.length,
+                'Content-Type': 'text/html'
+            });
+            response.end(html);
         } else {
             var html = getHtmlContent();
             response.writeHead(200, {

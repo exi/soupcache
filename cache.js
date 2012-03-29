@@ -35,7 +35,7 @@ var fs = require('fs'),
             return hashCut + "/" + encodeURIComponent(filename);
         };
 
-        var _getFileMimeType = function(cacheName, callback, tries) {
+        var _getFileMimeType = function(cacheName, callback) {
             try {
                 mime.fileWrapper(cacheName, function(err, type) {
                     if (err) {
@@ -46,9 +46,8 @@ var fs = require('fs'),
                     }
                 });
             } catch (e) {
-                if (tries < 5) {
-                    _getFileMimeType(cacheName, callback, tries + 1);
-                }
+                // assume text/html
+                callback('text/html');
             }
         };
 
@@ -82,7 +81,7 @@ var fs = require('fs'),
             },
             getFileMimeType: function(filename, callback) {
                 var cacheName = options.cachePath + sanitizeFileName(filename);
-                _getFileMimeType(cacheName, callback, 0);
+                _getFileMimeType(cacheName, callback);
             },
             getFileBuffer: function(filename) {
                 var cacheName = options.cachePath + sanitizeFileName(filename);
