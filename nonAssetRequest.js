@@ -1,7 +1,9 @@
 var url = require('url'),
     http = require('http'),
     https = require('https'),
-    util = require('util');
+    util = require('util'),
+    zlib = require('zlib');
+
 
 var mod = function(options) {
         return function(request, response) {
@@ -9,8 +11,8 @@ var mod = function(options) {
             var maxTries = 5;
             that.request = request;
             that.response = response;
-            that.soupData = null;
-            that.soupDataLength = 0;
+            that.soupData = new Buffer('');
+            that.contentEncoding = false;
             that.tries = 0;
 
             that.getSubDomain = function() {
@@ -44,33 +46,77 @@ var mod = function(options) {
                     newheaders.location = that.getNewResponseLocationField(newheaders.location);
                 }
 
-                newheaders['content-length'] = that.soupDataLength;
+                newheaders['content-length'] = that.soupData.length;
 
                 return newheaders;
             };
 
-            that.getSoupResponseData = function() {
-                return that.soupData.slice(0, that.soupDataLength);
-            };
-
-            that.getModifiedSoupResponseData = function() {
-                if (that.soupDataLength > 0) {
-                    var buf = null;
-                    var newdata = that.soupData.toString();
-                    if (isRss(newdata)) {
-                        buf = modifyRssAndReturnBuffer(newdata);
-                    } else if (isHtml(newdata)) {
-                        buf = modifyHtmlAndReturnBuffer(newdata);
-                    } else {
-                        buf = new Buffer(replaceSoupLinksInString(newdata));
-                    }
-
-                    that.soupDataLength = buf.length;
-                    return buf;
+            that.getModifiedSoupResponseData = function(callback) {
+                if (that.soupData.length > 0) {
+                    that.unpackCompressedData(
+                        that.soupData,
+                        that.contentEncoding,
+                        function(data) {
+                            var buf = null;
+                            data = data.toString();
+                            if (isRss(data)) {
+                                buf = modifyRssAndReturnBuffer(data);
+                            } else if (isHtml(data)) {
+                                buf = modifyHtmlAndReturnBuffer(data);
+                            } else {
+                                buf = new Buffer(replaceSoupLinksInString(data));
+                            }
+                            callback(buf);
+                        }
+                    );
                 } else {
-                    return new Buffer('');
+                    callback(new Buffer(''));
                 }
             };
+
+            that.unpackCompressedData = function(data, encoding, callback) {
+                var decompressor;
+
+                if (encoding == 'gzip') {
+                    decompressor = zlib.gunzip;
+                } else if (encoding == 'deflate') {
+                    decompressor = zlib.inflate;
+                } else {
+                    decompressor = function(data, cb) {
+                        cb(undefined, data);
+                    };
+                }
+
+                decompressor(data, function(err, buffer) {
+                    if (!err) {
+                        callback(buffer);
+                    } else {
+                        that.onSoupError();
+                    }
+                });
+            }
+
+            that.compressData = function(data, encoding, callback) {
+                var compressor;
+
+                if (encoding == 'gzip') {
+                    compressor = zlib.gzip;
+                } else if (encoding == 'deflate') {
+                    compressor = zlib.deflateRaw;
+                } else {
+                    compressor = function(data, cb) {
+                        cb(undefined, data);
+                    };
+                }
+
+                compressor(data, function(err, buffer) {
+                    if (!err) {
+                        callback(buffer);
+                    } else {
+                        that.onSoupError();
+                    }
+                });
+            }
 
             var isHtml = function(inputdata) {
                 return inputdata.search(/<li\ class/) != -1;
@@ -82,9 +128,7 @@ var mod = function(options) {
 
             var replaceSoupLinksInString = function(inputdata) {
                 return inputdata.replace(/soup\.io/g, options.domain).
-                    replace(/https:\/\//g, "http://").
-                    replace(/SOUP\.Public\.storefront_host\.sub\(\':\.\*\',\'\'\)/,
-                        "SOUP.Public.storefront_host.sub(/:.*/,'')"); // fix bug in soup javascript code... m)
+                    replace(/https:\/\//g, "http://");
             }
 
             var modifyHtmlAndReturnBuffer = function(inputdata) {
@@ -116,8 +160,8 @@ var mod = function(options) {
                         that.getModifiedSoupResponseHeaders(that.soupResponse.headers));
             }
 
-            that.setEncodingToPlaintext = function(headers) {
-                headers['accept-encoding'] = 'identity';
+            that.setAcceptEncoding = function(headers) {
+                headers['Accept-Encoding'] = 'gzip, deflate';
                 return headers;
             };
 
@@ -134,9 +178,9 @@ var mod = function(options) {
             };
 
             that.getModifiedSoupRequestHeader = function(headers) {
+                headers = that.setAcceptEncoding(headers);
                 headers = that.setNewRequestHost(headers);
                 headers = that.setNewReferrer(headers);
-                headers = that.setEncodingToPlaintext(headers);
                 return headers;
             };
 
@@ -157,8 +201,10 @@ var mod = function(options) {
 
             that.onSoupData = function(chunk) {
                 try {
-                    that.soupData.write(chunk, that.soupDataLength, 'binary');
-                    that.soupDataLength += Buffer.byteLength(chunk, 'binary');
+                    var newbuf = new Buffer(that.soupData.length + chunk.length);
+                    that.soupData.copy(newbuf, 0, 0);
+                    newbuf.write(chunk, that.soupData.length, chunk.length, 'binary');
+                    that.soupData = newbuf;
                 } catch (e) {
                     console.trace();
                     console.error(e.message);
@@ -166,20 +212,30 @@ var mod = function(options) {
             };
 
             that.onSoupEndTransform = function() {
-                var data = that.getModifiedSoupResponseData();
-                that.writeResponseHead();
-                if (that.soupDataLength > 0 && that.request.method != 'HEAD') {
-                    options.stats.dataCount[that.request.connection.remoteAddress] += that.soupDataLength;
-                    that.response.write(data);
-                }
-                that.response.end();
+                that.getModifiedSoupResponseData(
+                    function(data) {
+                        that.compressData(
+                            data,
+                            that.contentEncoding,
+                            function(data) {
+                                that.soupData = data;
+                                that.writeResponseHead();
+                                if (data.length > 0) {
+                                    options.stats.dataCount[that.request.connection.remoteAddress] += data.length;
+                                    that.response.write(data);
+                                }
+                                that.response.end();
+                            }
+                        );
+                    }
+                );
             };
 
             that.onSoupEnd = function() {
                 that.writeResponseHead();
-                if (that.soupDataLength > 0 && that.request.method != 'HEAD') {
-                    var data = that.getSoupResponseData();
-                    options.stats.dataCount[that.request.connection.remoteAddress] += that.soupDataLength;
+                if (that.soupData.length > 0 && that.request.method != 'HEAD') {
+                    var data = that.soupData;
+                    options.stats.dataCount[that.request.connection.remoteAddress] += that.soupData.length;
                     that.response.write(data);
                 }
                 that.response.end();
@@ -187,14 +243,26 @@ var mod = function(options) {
 
             that.onSoupResponse = function(res) {
                 that.soupResponse = res;
-                var bufsize = 0;
-                if (res.headers['content-length']) {
-                    bufsize = res.headers['content-length']?parseInt(res.headers['content-length']):0;
-                    res.on('data', that.onSoupData);
+
+                switch (res.headers['content-encoding']) {
+                    case 'gzip':
+                        that.contentEncoding = 'gzip';
+                        break;
+                    case 'deflate':
+                        that.contentEncoding = 'deflate';
+                        break;
+                    default:
+                        that.contentEncoding = false;
+                        break;
                 }
 
-                that.soupData = new Buffer(bufsize);
                 res.setEncoding('binary');
+
+                res.on('data', that.onSoupData);
+
+                if (that.request.headers.location) {
+                    console.error("redirect to " + that.request.headers.location);
+                }
 
                 if (that.shouldTransformData(res.headers)) {
                     res.on('end', that.onSoupEndTransform);
@@ -273,6 +341,7 @@ var mod = function(options) {
             try {
                 that.respondeWithOriginalPage();
             } catch (e) {
+                console.trace();
                 console.error("error:" + e.message);
             }
         };
