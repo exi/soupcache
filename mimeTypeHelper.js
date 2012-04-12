@@ -50,6 +50,7 @@ var getTypeAndClose = function(fileinfo, cb) {
 
 var closeAndReturnType = function(fileinfo, type, cb) {
     fs.close(fileinfo.fd, function(err) {
+        temp.cleanup();
         if (err) {
             cb(err);
         } else {
