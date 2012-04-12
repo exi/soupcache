@@ -48,13 +48,14 @@ var mod = function(options) {
     var onDownloadComplete = function(url, buffer, httpStatusCode) {
         mime.getBufferMimeType(buffer, function(err, mimeType) {
             for (var i in callbacks[url]) {
-                callbacks[url][i](buffer, mimeType, httpStatusCode);
+                callbacks[url][i](buffer, err ? 'text/html' : mimeType, httpStatusCode);
             }
 
             delete callbacks[url];
             delete activeDownloads[url];
 
-            if (mimeType.search(/application/) != -1 ||
+            if (err ||
+                    mimeType.search(/application/) != -1 ||
                     mimeType.search(/text/) != -1 ||
                     httpStatusCode < 200 ||
                     httpStatusCode >= 300) {
