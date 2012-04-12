@@ -81,7 +81,6 @@ module.exports = function(options, initcb) {
     };
 
     var openDbFileWrite = function(filename, contentType, metadata, cb) {
-        console.log("type: " + contentType);
         var gridstore = new GridStore(
             db,
             filename,
@@ -127,7 +126,6 @@ module.exports = function(options, initcb) {
                 if (err) {
                     cb(err);
                 } else {
-                    console.log("fileaccess to: " + filename);
                     getTypeFromGridStore(gs, function(err, type) {
                         if (err) {
                             cb(err);
