@@ -1,15 +1,12 @@
 var url = require('url'),
-    http = require('http'),
-    cache = require('./cache.js'),
-    util = require('util');
+    http = require('http');
 
 var mod = function(options) {
-        var cacheHandler = cache(options);
         return function(request, response) {
             var that = this;
 
             that.getSubDomain = function() {
-                var subDomainRegex = new RegExp("(.*)\." + options.domain + ".*"),
+                var subDomainRegex = new RegExp("(.*)\\." + options.domain + ".*"),
                     results = null;
                 results = request.headers.host.match(subDomainRegex);
                 if (results && results[1]) {

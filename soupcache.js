@@ -3,6 +3,7 @@ var url = require('url'),
     util = require('util'),
     server = null,
     onRequest = null,
+    Cache = require('./mongocache.js'),
     assetRequest = require('./assetRequest.js'),
     nonAssetRequest = require('./nonAssetRequest.js'),
     loginRequest = require('./loginRequest.js'),
@@ -12,13 +13,17 @@ var url = require('url'),
     statPrinter = require('./statPrinter.js'),
     events = new require('events'),
     options = {
-        domainPrefix: "parasoup.de",
-        ip: "188.40.102.160",
+        domainPrefix: "newsoup.de",
+        ip: "127.0.0.1",
         port: 80,
         cachePath: './psauxcache/',
         loadingCachePath: './psauxcache/loading/',
         maxFileSize: 52428800, //50MB
-        timeout: 30000 //30s
+        timeout: 30000, //30s
+        mongodb: {
+            host: '127.0.0.1',
+            port: 27017
+        }
     };
 
 options.assetLoader = new assetLoader(options);
@@ -32,8 +37,8 @@ options.domain = options.domainPrefix;
 var parasoupRequestHandler = new parasoupRequest(options);
 
 var onRequest = function(request, response) {
-    var assetRegex = new RegExp(".*\.asset\." + options.domain),
-        statusRegex = new RegExp("status\." + options.domain),
+    var assetRegex = new RegExp(".*\\.asset\\." + options.domain),
+        statusRegex = new RegExp("status\\." + options.domain),
         parasoupRegex = new RegExp("^" + options.domain + "$"),
         assetRequestHandler = new assetRequest(options),
         nonAssetRequestHandler = new nonAssetRequest(options),
@@ -68,9 +73,9 @@ statusProvider.push(function() {
     var convertToHumanReadable = function(bytes) {
         var factors = [[1, 'B'], [1024, 'KB'], [1048576, 'MB'], [1073741824, 'GB']];
         var ret = "";
-        for (var i = 0; i<factors.length; i++) {
-            if (i+1 >= factors.length || (bytes>factors[i][0] && bytes<factors[i+1][0]) || bytes == 0) {
-                ret = Math.floor(bytes/(factors[i][0])) + factors[i][1];
+        for (var i = 0; i < factors.length; i++) {
+            if (i + 1 >= factors.length || (bytes > factors[i][0] && bytes < factors[i + 1][0]) || bytes === 0) {
+                ret = Math.floor(bytes / (factors[i][0])) + factors[i][1];
                 break;
             }
         }
@@ -84,7 +89,7 @@ statusProvider.push(function() {
     }
 
     for (var i = 0; i < dataArray.length; i++) {
-        if (dataArray[i] == "" || typeof dataArray[i] == "undefined" || isNaN(options.stats.dataCount[dataArray[i]])) {
+        if (dataArray[i] === "" || typeof dataArray[i] == "undefined" || isNaN(options.stats.dataCount[dataArray[i]])) {
             delete options.stats.dataCount[dataArray[i]];
             dataArray.splice(i, 1);
         }
@@ -92,12 +97,12 @@ statusProvider.push(function() {
 
     var byteSort = function(a, b) {
         return parseInt(options.stats.dataCount[b]) - parseInt(options.stats.dataCount[a]);
-    }
+    };
 
     var anonymizeIP = function(ip) {
         var lastDot = ip.lastIndexOf(".");
-        return ip.substr(0, lastDot) + "\.*";
-    }
+        return ip.substr(0, lastDot) + "\\.*";
+    };
 
     dataArray.sort(byteSort);
 
@@ -111,6 +116,14 @@ statusProvider.push(function() {
 
 options.statPrinter = new statPrinter(statusProvider);
 
-server = http.createServer(onRequest).listen(options.port, options.ip, function() {
-    process.setuid('exi');
+new Cache(options, function(err, cacheHandler) {
+    if (err) {
+        throw err;
+    } else {
+        options.cacheHandler = cacheHandler;
+        server = http.createServer(onRequest).listen(options.port, options.ip, function() {
+            process.setuid('exi');
+        });
+    }
 });
+

@@ -1,6 +1,5 @@
 var Url = require('url'),
     http = require('http'),
-    cache = require('./cache.js'),
     util = require('util');
 
 var assetDownload = function(mirror, url, options, callback) {
@@ -39,11 +38,11 @@ var assetDownload = function(mirror, url, options, callback) {
             },
             onFetchResponse);
         soupRequest.on('error', onError);
-    }
+    };
 
     var getMirror = function() {
         return mirrors[tries % mirrors.length];
-    }
+    };
 
     var getUrl = function(href) {
         var newUrl = Url.parse(href);
@@ -84,12 +83,12 @@ var assetDownload = function(mirror, url, options, callback) {
             res.on('data', onFileData);
             res.on('end', onFileEnd);
         }
-    }
+    };
 
     var onRequestTimeout = function() {
         console.log("timeout...retry");
         fetchFileAndFinish();
-    }
+    };
 
     var onError = function(error) {
         console.trace();
@@ -116,11 +115,11 @@ var assetDownload = function(mirror, url, options, callback) {
             console.error("bufferlength: " + fileBuffer.length);
             errorFinish();
         }
-    }
+    };
 
     var onFileEnd = function() {
         finish();
-    }
+    };
 
     var finish = function() {
         try {
@@ -146,7 +145,7 @@ var assetDownload = function(mirror, url, options, callback) {
         var mirrorsString = "[" + mirrors.join(",") + "]";
         return currentMirror + url + " \t" + (tries + 1) + " tries \t" +
             waitingTime + "s \t" + fileWritten + "/" + fileSize + " \t mirrors:" + mirrorsString + "\t" + that.getStatusBar();
-    }
+    };
 
     that.getStatusBar = function() {
         var bar = "[";
@@ -163,7 +162,7 @@ var assetDownload = function(mirror, url, options, callback) {
         }
         bar += "]";
         return bar;
-    }
+    };
 
     that.addMirror = function(host) {
         var l = mirrors.length;
@@ -173,7 +172,7 @@ var assetDownload = function(mirror, url, options, callback) {
             }
         }
         mirrors.push(host);
-    }
+    };
 
     fetchFileAndFinish();
 };
