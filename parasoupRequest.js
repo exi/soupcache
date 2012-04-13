@@ -1,37 +1,48 @@
-var fs = require('fs');
+var fs = require('fs'),
+    Cache = require('./parasoupCache.js');
 var soupInterval = 950;
 var mod = function(options) {
     var clients = [],
-        assetCache = [],
-        assetCacheFile = options.cachePath + "parasoupAssetCache.json",
-        getHtmlContent = function() { return fs.readFileSync("./parasoup.html", 'utf-8'); },
-        getNewHtmlContent = function() { return fs.readFileSync("./parasoupNew.html", 'utf-8'); },
+        cache = null,
+        cacheSize = null,
+        getHtmlContent = function() {
+            return fs.readFileSync("./parasoup.html", 'utf-8');
+        },
+        getNewHtmlContent = function() {
+            return fs.readFileSync("./parasoupNew.html", 'utf-8');
+        },
         served = 0,
         cacheLoaded = false,
         stallTimer = null;
 
     options.eventBus.on('newAsset', function(url, buffer, contentType) {
         if (buffer.length > 30 * 1024) {
-            var data = {url: url};
             if (clients.length > 0) {
-                deliverToClients(data);
-            } else {
-                assetCache.push(data);
-                writeCacheToDisc();
-                updateStats();
+                deliverToClients(url);
+            } else if (cache !== null) {
+                cache.insert(url, function(err) {
+                    if (err) {
+                        console.error(err.message);
+                        console.error(err.stack);
+                    }
+                    updateStats();
+                });
             }
             resetStallTimer();
         }
     });
 
-    var deliverToClients = function(data) {
-        var response = "http://a.asset." + options.domain + data.url;
-        for (var i = 0; i<clients.length; i++) {
-            try{
-                clients[i].response.writeHead(200, {
-                    'Content-Length': response.length,
-                    'Content-Type': 'text/plain'
-                });
+    var deliverToClients = function(url) {
+        var response = "http://a.asset." + options.domain + url;
+        for (var i = 0; i < clients.length; i++) {
+            try {
+                clients[i].response.writeHead(
+                    200,
+                    {
+                        'Content-Length': response.length,
+                        'Content-Type': 'text/plain'
+                    }
+                );
                 clients[i].response.end(response);
                 served++;
                 updateStats();
@@ -42,42 +53,18 @@ var mod = function(options) {
         clients = [];
     };
 
-    var writeCacheToDisc = function() {
-        try {
-            if (cacheLoaded) {
-                fs.writeFileSync(assetCacheFile, JSON.stringify(assetCache));
+    var getCacheSize = function(cb) {
+        cache.size(function(err, size) {
+            if (err) {
+                cb(err);
+            } else {
+                cacheSize = size;
+                cb(null, size);
             }
-        } catch (e) {
-            console.error("error: " + e.message);
-            console.error(e.stack);
-        }
+        });
     };
 
-    var loadCacheFromDisc = function() {
-        try {
-            if (fs.existsSync(assetCacheFile)) {
-                var content = fs.readFileSync(assetCacheFile);
-                try {
-                    assetCache = JSON.parse(content);
-                    if (!(assetCache instanceof Array)) {
-                        assetCache = [];
-                    }
-                } catch (e) {
-                    assetCache = [];
-                }
-                updateStats();
-            }
-            cacheLoaded = true;
-        } catch (e) {
-            console.error("error: " + e.message);
-            console.error(e.stack);
-            setTimeout(loadCacheFromDisc, 1000);
-        }
-    };
-
-    var onStallTimer = function() {
-        removeStallTimer();
-
+    var deliverDataIfNecessary = function(cb) {
         if (assetCache.length > 0 && clients.length > 0) {
             var l = assetCache.length;
             // Take from the last 100 added, this ensures that the cache somehow reflects the current time of the day
@@ -89,7 +76,36 @@ var mod = function(options) {
             updateStats();
             writeCacheToDisc();
         }
-        resetStallTimer();
+        if (clients.length === 0) {
+            cb();
+        } else {
+            getCacheSize(function(err, size) {
+                if (err) {
+                    console.error(err.message);
+                    console.error(err.stack);
+                } else if (size > 0) {
+                    cache.getAndRemoveItem(function(err, url) {
+                        if (err) {
+                            console.error(err.message);
+                            console.error(err.stack);
+                            cb();
+                        } else {
+                            deliverToClients(url);
+                            cb();
+                        }
+                    });
+                } else {
+                    cb();
+                }
+            });
+        }
+    };
+
+    var onStallTimer = function() {
+        removeStallTimer();
+        deliverDataIfNecessary(function() {
+            resetStallTimer();
+        });
     };
 
     var removeStallTimer = function() {
@@ -105,12 +121,15 @@ var mod = function(options) {
     };
 
     var updateStats = function() {
-            options.stats.parasoupAssetCache = assetCache.length;
-            options.stats.parasoups = served;
-    }
+        options.stats.parasoupAssetCache = cacheSize;
+        options.stats.parasoups = served;
+    };
 
-    loadCacheFromDisc();
-    resetStallTimer();
+    Cache(options, function(err, tcache) {
+        cache = tcache;
+        getCacheSize(function() {});
+        resetStallTimer();
+    });
 
     return function(request, response) {
         if (request.url == "/newStuff") {

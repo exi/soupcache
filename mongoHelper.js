@@ -1,6 +1,6 @@
 var Db = require('mongodb').Db,
     Server = require('mongodb').Server;
-var db = null;
+var dbs = {};
 
 var connectToDb = function(options, initcb) {
     if (!options) {
@@ -23,7 +23,11 @@ var connectToDb = function(options, initcb) {
         return;
     }
 
-    if (db === null) {
+    if (!dbs[options.mongodb.host]) {
+        dbs[options.mongodb.host] = {};
+    }
+
+    if (!dbs[options.mongodb.host][options.mongodb.port]) {
         var dbo = new Db(
             'parasoup',
             new Server(
@@ -34,16 +38,16 @@ var connectToDb = function(options, initcb) {
             { native_parser: false }
         );
 
-        dbo.open(function(err, tdb) {
+        dbo.open(function(err, db) {
             if (err) {
                 initcb(err);
             } else {
-                db = tdb;
+                dbs[options.mongodb.host][options.mongodb.port] = db;
                 initcb(null, db);
             }
         });
     } else {
-        initcb(null, db);
+        initcb(null, dbs[options.mongodb.host][options.mongodb.port]);
     }
 };
 

@@ -1,45 +1,71 @@
 var fs = require("fs"),
     mime = require("./mimeTypeHelper.js"),
+    Pcache = require("./parasoupCache.js"),
     Cache = require("./mongocache.js");
 var a = {};
 var options = { mongodb: { host: '127.0.0.1', port: 27017 } };
+
+var printError = function(err) {
+    console.log(err.message);
+    console.log(err.stack);
+};
+
 console.log("connecting");
-var cache = new Cache(options, function(err, api) {
+var fileName = "" + parseInt(Math.random() * 1000) + "test.txt";
+var pcache = new Pcache(options, function(err, pcache) {
     if (err) {
-        throw err;
+        printError(err);
     } else {
-        console.log("connected");
-        var data = "<html></html>";
-        mime.getBufferMimeType(new Buffer(data), function(err, type) {
+        var cache = new Cache(options, function(err, api) {
             if (err) {
-                throw err;
+                printError(err);
             } else {
-                console.log("write type: " + type);
-                api.insertFileBuffer(
-                    "testfile2.txt",
-                    data,
-                    type,
-                    function() {
-                        console.log("write done");
-                        api.getFileBufferAndType(
-                            "testfile2.txt",
-                            function(err, data, type) {
-                                if (err) {
-                                    console.log(err.message);
-                                    console.log(err.stack);
-                                } else {
-                                    console.log("read: " + data);
-                                    console.log("read type: " + type);
-                                    console.log("win");
-                                    process.exit(0);
-                                }
+                console.log("connected");
+                var data = "<html></html>";
+                mime.getBufferMimeType(new Buffer(data), function(err, type) {
+                    if (err) {
+                        printError(err);
+                    } else {
+                        console.log("write type: " + type);
+                        api.insertFileBuffer(
+                            fileName,
+                            data,
+                            type,
+                            function() {
+                                console.log("write done");
+                                api.getFileBufferAndType(
+                                    fileName,
+                                    function(err, data, type) {
+                                        if (err) {
+                                            printError(err);
+                                        } else {
+                                            console.log("read: " + data);
+                                            console.log("read type: " + type);
+                                            pcache.insert(fileName, function(err, file) {
+                                                if (err) {
+                                                    printError(err);
+                                                } else {
+                                                    console.log("inserted " + fileName);
+                                                    pcache.getAndRemoveItem(function(err, file) {
+                                                        if (err) {
+                                                            printError(err);
+                                                        } else {
+                                                            console.log("got " + file);
+                                                            process.exit(0);
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    }
+                                );
                             }
-                            );
+                        );
                     }
-                );
+                });
+                a.api = api;
             }
         });
-        a.api = api;
     }
 });
 
