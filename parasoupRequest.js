@@ -6,7 +6,8 @@ var mod = function(options) {
         assetCacheFile = options.cachePath + "parasoupAssetCache.json",
         getHtmlContent = function() { return fs.readFileSync("./parasoup.html", 'utf-8'); },
         getNewHtmlContent = function() { return fs.readFileSync("./parasoupNew.html", 'utf-8'); },
-        served = 0;
+        served = 0,
+        cacheLoaded = false,
         stallTimer = null;
 
     options.eventBus.on('newAsset', function(url, buffer, contentType) {
@@ -42,18 +43,35 @@ var mod = function(options) {
     };
 
     var writeCacheToDisc = function() {
-        fs.writeFileSync(assetCacheFile, JSON.stringify(assetCache));
+        try {
+            if (cacheLoaded) {
+                fs.writeFileSync(assetCacheFile, JSON.stringify(assetCache));
+            }
+        } catch (e) {
+            console.error("error: " + e.message);
+            console.error(e.stack);
+        }
     };
 
     var loadCacheFromDisc = function() {
         try {
-            var stat = fs.statSync(assetCacheFile);
-            if (stat.isFile()) {
+            if (fs.existsSync(assetCacheFile)) {
                 var content = fs.readFileSync(assetCacheFile);
-                assetCache = JSON.parse(content);
+                try {
+                    assetCache = JSON.parse(content);
+                    if (!(assetCache instanceof Array)) {
+                        assetCache = [];
+                    }
+                } catch (e) {
+                    assetCache = [];
+                }
                 updateStats();
             }
+            cacheLoaded = true;
         } catch (e) {
+            console.error("error: " + e.message);
+            console.error(e.stack);
+            setTimeout(loadCacheFromDisc, 1000);
         }
     };
 

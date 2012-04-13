@@ -54,6 +54,11 @@ var mod = function(options) {
             delete callbacks[url];
             delete activeDownloads[url];
 
+            if (err) {
+                console.error("error requesting mime type: " + err.message);
+                console.error(err.stack);
+            }
+
             if (err ||
                     mimeType.search(/application/) != -1 ||
                     mimeType.search(/text/) != -1 ||

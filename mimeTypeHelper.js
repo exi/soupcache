@@ -1,12 +1,26 @@
 var fs = require('fs'),
-    temp = require('temp'),
+    path = require('path'),
     mime = require('mime-magic');
 
+var getRandomName = function() {
+  var now = new Date();
+  var name = ['parasoup', now.getYear(), now.getMonth(), now.getDay(),
+              '-',
+              process.pid,
+              '-',
+              (Math.random() * 0x100000000 + 1).toString(36)].join('');
+  return name;
+}
+
 var getBufferMimeType = function(buffer, cb) {
-    temp.open('parasoup', function(err, info) {
+    var info = {
+        path: path.join(fs.realpathSync('/tmp'), getRandomName())
+    };
+    fs.open(info.path, 'w+', 0600, function(err, fd) {
         if (err) {
             cb(err);
         } else {
+            info.fd = fd;
             writeAndGetType(buffer, info, cb);
         }
     });
@@ -36,26 +50,19 @@ var getTypeAndClose = function(fileinfo, cb) {
     }
 };
 
-var closeAndReturnType = function(fileinfo, type, cb) {
-    fs.close(fileinfo.fd, function(err) {
-        temp.cleanup();
-        if (err) {
-            cb(err);
-        } else {
-            cb(null, type);
-        }
-    });
+var closeAndDelete = function(info) {
+    fs.closeSync(info.fd);
+    fs.unlinkSync(info.path);
 };
 
-var closeAndReturnError = function(fileinfo, error, cb) {
-    fs.close(fileinfo.fd, function(err) {
-        temp.cleanup();
-        if (err) {
-            cb(err);
-        } else {
-            cb(error);
-        }
-    });
+var closeAndReturnType = function(fileinfo, type, cb) {
+    closeAndDelete(fileinfo);
+    cb(null, type);
+};
+
+var closeDeleteAndReturnError = function(fileinfo, error, cb) {
+    closeAndDelete(fileinfo);
+    cb(error);
 };
 
 module.exports = {
