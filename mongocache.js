@@ -1,7 +1,7 @@
 var fs = require('fs'),
     mime = require('mime-magic'),
     crypto = require('crypto'),
-    Db = require('mongodb').Db,
+    mongoHelper = require("./mongoHelper.js"),
     Server = require('mongodb').Server,
     GridStore = require('mongodb').GridStore,
     ReplSetServers = require('mongodb').ReplSetServers,
@@ -14,43 +14,11 @@ var fs = require('fs'),
 var rootCollection = "parasoup";
 
 module.exports = function(options, initcb) {
-    var dbo, db;
+    var db;
     if (!options) {
         initcb(new Error("missing options"));
         return;
     }
-    if (!options.mongodb) {
-        initcb(new Error("missing mongodb settings"));
-        return;
-    }
-    if (!options.mongodb.host) {
-        initcb(new Error("missing mongodb host"));
-        return;
-    }
-    if (!options.mongodb.port) {
-        initcb(new Error("missing mongodb port"));
-        return;
-    }
-
-    var connectDb = function(cb) {
-        dbo = new Db(
-            'parasoup',
-            new Server(
-                options.mongodb.host,
-                options.mongodb.port,
-                { auto_reconnect: true, poolSize: 1 }
-                ),
-            { native_parser: false }
-        );
-        dbo.open(function(err, tdb) {
-            if (err) {
-                cb(err);
-            } else {
-                db = tdb;
-                cb();
-            }
-        });
-    };
 
     var sanitizeFileName = function(filename) {
         return encodeURIComponent(filename);
@@ -155,10 +123,12 @@ module.exports = function(options, initcb) {
         cb(!contentType ? new Error("file not found") : null, contentType);
     };
 
-    connectDb(function(err) {
+
+    mongoHelper.open(options, function(err, tdb) {
         if (err) {
             initcb(err);
         } else {
+            db = tdb;
             var api = {
                 insertFileBuffer: function(filename, buffer, mimeType, cb) {
                     var cacheName = sanitizeFileName(filename);
