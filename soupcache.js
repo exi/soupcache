@@ -16,9 +16,6 @@ var url = require('url'),
         domainPrefix: "parasoup.de",
         ip: "188.40.102.160",
         port: 80,
-        cachePath: './psauxcache/',
-        loadingCachePath: './psauxcache/loading/',
-        maxFileSize: 52428800, //50MB
         timeout: 30000, //30s
         mongodb: {
             host: '127.0.0.1',

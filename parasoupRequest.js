@@ -24,8 +24,10 @@ var mod = function(options) {
                     if (err) {
                         console.error(err.message);
                         console.error(err.stack);
+                    } else {
+                        cacheSize++;
+                        updateStats();
                     }
-                    updateStats();
                 });
             }
             resetStallTimer();
@@ -59,23 +61,13 @@ var mod = function(options) {
                 cb(err);
             } else {
                 cacheSize = size;
+                updateStats();
                 cb(null, size);
             }
         });
     };
 
     var deliverDataIfNecessary = function(cb) {
-        if (assetCache.length > 0 && clients.length > 0) {
-            var l = assetCache.length;
-            // Take from the last 100 added, this ensures that the cache somehow reflects the current time of the day
-            var index = l -  Math.floor(Math.random() * Math.min(l, 100));
-            index = Math.max(0, Math.min(l - 1, index));
-            var data = assetCache[index];
-            deliverToClients(data);
-            assetCache.splice(index, 1);
-            updateStats();
-            writeCacheToDisc();
-        }
         if (clients.length === 0) {
             cb();
         } else {
