@@ -3,6 +3,7 @@ var fs = require('fs'),
     crypto = require('crypto'),
     mongoHelper = require("./mongoHelper.js"),
     Server = require('mongodb').Server,
+    Collection = require('mongodb').Collection,
     GridStore = require('mongodb').GridStore,
     ReplSetServers = require('mongodb').ReplSetServers,
     ObjectID = require('mongodb').ObjectID,
@@ -14,7 +15,7 @@ var fs = require('fs'),
 var rootCollection = "parasoup";
 
 module.exports = function(options, initcb) {
-    var db;
+    var db, collection;
     if (!options) {
         initcb(new Error("missing options"));
         return;
@@ -123,12 +124,21 @@ module.exports = function(options, initcb) {
         cb(!contentType ? new Error("file not found") : null, contentType);
     };
 
+    var updateStats = function() {
+        collection.find({}).count(function(err, count) {
+            if (!err) {
+                options.stats.assetCount = count;
+            }
+        });
+    };
 
     mongoHelper.open(options, function(err, tdb) {
         if (err) {
             initcb(err);
         } else {
             db = tdb;
+            collection = new Collection(db, 'parasoup.files');
+            updateStats();
             var api = {
                 insertFileBuffer: function(filename, buffer, mimeType, cb) {
                     var cacheName = sanitizeFileName(filename);
@@ -139,7 +149,8 @@ module.exports = function(options, initcb) {
                         function(err) {
                             cb(err);
                         }
-                        );
+                    );
+                    updateStats();
                 },
                 getFileMimeType: function(filename, cb) {
                     var cacheName = sanitizeFileName(filename);

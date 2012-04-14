@@ -206,8 +206,8 @@ var mod = function(options) {
                     newbuf.write(chunk, that.soupData.length, chunk.length, 'binary');
                     that.soupData = newbuf;
                 } catch (e) {
-                    console.trace();
                     console.error(e.message);
+                    console.error(e.stack);
                 }
             };
 
@@ -341,8 +341,8 @@ var mod = function(options) {
             try {
                 that.respondeWithOriginalPage();
             } catch (e) {
-                console.trace();
-                console.error("error:" + e.message);
+                console.error(e.message);
+                console.error(e.stack);
             }
         };
     };

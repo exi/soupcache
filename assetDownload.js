@@ -91,7 +91,8 @@ var assetDownload = function(mirror, url, options, callback) {
     };
 
     var onError = function(error) {
-        console.error("error: " + error.message);
+        console.error(error.message);
+        console.error(error.stack);
         tries++;
         console.error("retry(" + tries + ") " + url);
         setTimeout(fetchFileAndFinish, 500);
@@ -107,7 +108,7 @@ var assetDownload = function(mirror, url, options, callback) {
             fileWritten += Buffer.byteLength(chunk, 'binary');
             idleDate = new Date();
         } catch (e) {
-            console.error("error: " + e.message);
+            console.error(e.message);
             console.error(e.stack);
             console.error("fileWritten: " + fileWritten);
             console.error("fileSize: " + fileSize);
@@ -128,7 +129,7 @@ var assetDownload = function(mirror, url, options, callback) {
                 var newbuf = new Buffer(fileBuffer).slice(0, fileWritten);
                 callback(originalUrl, newbuf, statusCode);
             } catch (e) {
-                console.error("error: " + e.message);
+                console.error(e.message);
                 console.error(e.stack);
                 errorFinish();
             }

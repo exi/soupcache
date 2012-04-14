@@ -25,7 +25,7 @@ var url = require('url'),
 
 var startupComponents = function(options) {
     options.assetLoader = new assetLoader(options);
-    options.stats = { dataCount: {}, redirects: 0, parasoups: 0, parasoupAssetCache: 0 };
+    options.stats = { dataCount: {}, redirects: 0, parasoups: 0, parasoupAssetCache: 0, assetCount: 0 };
     options.eventBus = new events.EventEmitter();
 
     // we need this because the browsers will expect port numbers
@@ -106,6 +106,7 @@ var startupComponents = function(options) {
 
         var status = "";
 
+        status += "assets on server: " + options.stats.assetCount + "\n";
         status += "parasoups served: " + options.stats.parasoups + "\n";
         status += "parasoup asset cache: " + options.stats.parasoupAssetCache + "\n";
 
