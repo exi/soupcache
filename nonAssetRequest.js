@@ -16,9 +16,15 @@ var mod = function(options) {
             that.tries = 0;
 
             that.getSubDomain = function() {
+                if (!that.request || !that.request.headers || !that.request.headers.host) {
+                    return null;
+                }
+
                 var subDomainRegex = new RegExp("(.*)\." + options.domain + ".*"),
                     results = null;
+
                 results = that.request.headers.host.match(subDomainRegex);
+
                 if (results && results[1]) {
                     return results[1];
                 } else {
