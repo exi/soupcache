@@ -22,7 +22,6 @@ var assetDownload = function(mirror, url, options, callback) {
         fileSize = 0;
         fileWritten = 0;
         fileBuffer = null;
-        tries = null;
         soupRequest = null;
     };
 
@@ -91,11 +90,15 @@ var assetDownload = function(mirror, url, options, callback) {
     };
 
     var onError = function(error) {
-        console.error(error.message);
-        console.error(error.stack);
-        tries++;
-        console.error("retry(" + tries + ") " + url);
-        setTimeout(fetchFileAndFinish, 500);
+        if (tries > 10) {
+            errorFinish();
+        } else {
+            console.error(error.message);
+            console.error(error.stack);
+            tries++;
+            console.error("retry(" + tries + ") " + url);
+            setTimeout(fetchFileAndFinish, 500);
+        }
     };
 
     var onFileData = function(chunk) {
@@ -178,7 +181,23 @@ var assetDownload = function(mirror, url, options, callback) {
         mirrors.push(host);
     };
 
-    fetchFileAndFinish();
+    var hasSaneConditions = function() {
+        if (!mirror) {
+            return false;
+        }
+
+        if ((/^\.\./).test(url)) {
+            return false;
+        }
+
+        return true;
+    };
+
+    if (hasSaneConditions()) {
+        fetchFileAndFinish();
+    } else {
+        errorFinish();
+    }
 };
 
 module.exports = assetDownload;
