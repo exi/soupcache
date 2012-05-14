@@ -55,14 +55,16 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var onFetchResponse = function(res) {
         if (res.statusCode >= 300 && res.statusCode < 400) {
-            if (originalUrl == getUrl(res.headers.location)) {
+            var newUrl = getUrl(res.headers.location);
+            if (originalUrl == newUrl) {
                 console.error("endless redirect detected...");
                 errorFinish();
+            } else if (!hasSaneConditions()) {
+                console.error("no sane conditions");
+                errorFinish();
             } else if (redirects < maxRedirects) {
-                var location = res.headers.location;
-
-                url = getUrl(location);
-                mirrors = [getHostname(location)];
+                url = newUrl;
+                mirrors = [getHostname(url)];
 
                 redirects++;
                 options.stats.redirects++;
@@ -96,7 +98,7 @@ var assetDownload = function(mirror, url, options, callback) {
             console.error(error.message);
             console.error(error.stack);
             tries++;
-            console.error("retry(" + tries + ") " + url);
+            console.error("asset retry(" + tries + ") '" + url +"'");
             setTimeout(fetchFileAndFinish, 500);
         }
     };
@@ -183,10 +185,13 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var hasSaneConditions = function() {
         if (!mirror) {
+            console.error("no mirror");
             return false;
         }
 
-        if ((/^\.\./).test(url)) {
+        var reg = /\.\./;
+        if (reg.test(url) || reg.test(mirror)) {
+            console.error("invalid url or mirror: '" + url + "' " + "'" +mirror + "'");
             return false;
         }
 
