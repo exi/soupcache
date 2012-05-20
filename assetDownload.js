@@ -11,6 +11,7 @@ var assetDownload = function(mirror, url, options, callback) {
     var fileBuffer = null;
     var fileWritten = 0;
     var fileSize = 0;
+    var mimeType = null;
     var idleDate = new Date();
     var soupRequest = null;
     var statusCode = 200;
@@ -23,6 +24,7 @@ var assetDownload = function(mirror, url, options, callback) {
         fileWritten = 0;
         fileBuffer = null;
         soupRequest = null;
+        mimeType = null;
     };
 
     var fetchFileAndFinish = function() {
@@ -58,27 +60,30 @@ var assetDownload = function(mirror, url, options, callback) {
             var newUrl = getUrl(res.headers.location);
             if (originalUrl == newUrl) {
                 console.error("endless redirect detected...");
-                errorFinish();
+                errorFinish(404);
             } else if (!hasSaneConditions()) {
-                console.error("no sane conditions");
-                errorFinish();
+                errorFinish(404);
             } else if (redirects < maxRedirects) {
                 url = newUrl;
-                mirrors = [getHostname(url)];
+                var newHost = getHostname(url);
 
-                redirects++;
-                options.stats.redirects++;
+                if (newHost) {
+                    mirrors = [newHost];
+                    redirects++;
+                    options.stats.redirects++;
+                }
 
                 fetchFileAndFinish();
             } else {
                 console.error("aborting asset request because of too many redirects");
                 soupRequest.abort();
-                errorFinish();
+                errorFinish(404);
             }
         } else {
             res.setEncoding('binary');
             var contentLength = parseInt(res.headers['content-length']);
             fileSize = contentLength;
+            mimeType = res.headers['content-type'] ? res.headers['content-type'] : null;
             statusCode = res.statusCode;
             res.on('error', onError);
             res.on('data', onFileData);
@@ -132,7 +137,7 @@ var assetDownload = function(mirror, url, options, callback) {
         } else {
             try {
                 var newbuf = new Buffer(fileBuffer).slice(0, fileWritten);
-                callback(originalUrl, newbuf, statusCode);
+                callback(originalUrl, newbuf, statusCode, mimeType);
             } catch (e) {
                 console.error(e.message);
                 console.error(e.stack);
@@ -141,11 +146,13 @@ var assetDownload = function(mirror, url, options, callback) {
         }
     };
 
-    var errorFinish = function() {
-        console.error("errorFinish");
+    var errorFinish = function(status) {
+        status = status || 500;
+        console.error(new Date());
+        console.error("errorFinish(" + status + ")");
         console.trace();
         var newbuf = new Buffer(0);
-        callback(originalUrl, newbuf, 500);
+        callback(originalUrl, newbuf, status);
     };
 
     that.getStatus = function() {
@@ -185,13 +192,11 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var hasSaneConditions = function() {
         if (!mirror) {
-            console.error("no mirror");
             return false;
         }
 
         var reg = /\.\./;
         if (reg.test(url) || reg.test(mirror)) {
-            console.error("invalid url or mirror: '" + url + "' " + "'" +mirror + "'");
             return false;
         }
 
@@ -201,7 +206,7 @@ var assetDownload = function(mirror, url, options, callback) {
     if (hasSaneConditions()) {
         fetchFileAndFinish();
     } else {
-        errorFinish();
+        errorFinish(404);
     }
 };
 

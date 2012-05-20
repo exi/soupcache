@@ -45,8 +45,8 @@ var mod = function(options) {
         }
     };
 
-    var onDownloadComplete = function(url, buffer, httpStatusCode) {
-        mime.getBufferMimeType(buffer, function(err, mimeType) {
+    var onDownloadComplete = function(url, buffer, httpStatusCode, mimeType) {
+        var onMimeRequestResponse = function(err, mimeType) {
             for (var i in callbacks[url]) {
                 callbacks[url][i](buffer, err ? 'text/html' : mimeType, httpStatusCode);
             }
@@ -74,8 +74,12 @@ var mod = function(options) {
                     }
                 });
             }
-        });
-
+        }
+        if (mimeType) {
+            onMimeRequestResponse(null, mimeType)
+        } else {
+            mime.getBufferMimeType(buffer, onMimeRequestResponse);
+        }
     };
 
     that.getStatus = function() {
