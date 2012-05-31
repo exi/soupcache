@@ -62,7 +62,7 @@ here for: <span id="time"></span>, watched <span id="items"></span> pictures
         this.fetch = function() {
             var that = this;
             $.ajax({
-                url: "http://" + window.location.hostname + "/newStuff",
+                url: "http://" + window.location.hostname + "/newStuff?",
                 success: function(data, textStatus, xhr) {
                     if (xhr.status == 200) {
                         that.add(data);

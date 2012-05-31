@@ -124,7 +124,7 @@ var mod = function(options) {
     });
 
     return function(request, response) {
-        if (request.url == "/newStuff") {
+        if (request.url == "/newStuff?") {
             clients.push({
                 request: request,
                 response: response
