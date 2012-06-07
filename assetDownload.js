@@ -69,7 +69,7 @@ var assetDownload = function(mirror, url, options, callback) {
     }
 
     var getUrl = function(href) {
-        var newUrl = Url.parse(href);
+        var newUrl = Url.parse(Url.resolve(url, href));
         return newUrl.pathname + (newUrl.search || '');
     };
 
@@ -80,14 +80,13 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var onFetchResponse = function(res) {
         if (res.statusCode >= 300 && res.statusCode < 400) {
-            var newUrl = getUrl(res.headers.location);
-            if (originalUrl == newUrl) {
+            url = getUrl(res.headers.location);
+            if (originalUrl == url) {
                 console.error("endless redirect detected...");
                 errorFinish(404);
             } else if (!hasSaneConditions()) {
                 errorFinish(404);
             } else if (redirects < maxRedirects) {
-                url = newUrl;
                 var newHost = getHostname(url);
 
                 if (newHost) {
