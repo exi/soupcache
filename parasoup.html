@@ -7,13 +7,27 @@
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
     <style type="text/css">
-        #slider { width: 250px;float: left; margin-right: 10px;}
+        #slider { width: 250px; margin-right: 10px;}
+        #toggler { width: 100%; height: 4px; z-index: 10; background-color: grey;}
+        #indicator { width: 100%; height: 2px; background-color: blue;}
+        .paused { background-color: red !important; }
+        #effect { height: 120px; width: 100%; position: absolute; top: 2px; left: 0px; overflow: hidden; }
+        #effect.closed { height: 0px; border: 0px; }
+        #effect h3 { margin: 0; padding: 5px; text-align: center; }
     </style>
 </head>
 <body style="margin: 0;">
-<div id="slider"></div>
-picture delay: <span id="delay"></span>, pause with any key,click image for search, <a href="http://www.parasoup.de">click here for soup</a>, <u><span id="paused">unpaused</span></u>.
-here for: <span id="time"></span>, watched <span id="items"></span> pictures
+<div id="toggler">
+<div id="indicator"> </div>
+<div id="effect" class="ui-widget-content ui-corner-all closed">
+    <h3 class="ui-widget-header ui-corner-all">Parasoup</h3>
+    <p>
+    <div id="slider"></div>
+    picture delay: <span id="delay"></span>. Pause with any key. Click image for search, <a href="http://www.parasoup.de">click here for soup</a>. <u><span id="paused">unpaused</span></u>.
+    here for: <span id="time"></span>, watched <span id="items"></span> pictures. You can trigger "next Image" with j, l, left/down arraw, even in paused mode.
+    </p>
+</div>
+</div>
 <div id="container"></div>
 <script type="text/javascript">
     var Cache = function() {
@@ -37,12 +51,14 @@ here for: <span id="time"></span>, watched <span id="items"></span> pictures
         }
     };
     Cache.prototype._fetchDone = function() {
-        console.log(this.name + " store status: " + this.length() + "/" + this._cacheSize);
         this._requestInProgress = false;
         this.update();
     };
     Cache.prototype.add = function(item) {
         this._store.push(item);
+    }
+    Cache.prototype.fillStatus = function() {
+        return this.length() / this._cacheSize;
     }
     Cache.prototype.fetch = function() {};
     Cache.prototype.get = function() {
@@ -102,6 +118,7 @@ here for: <span id="time"></span>, watched <span id="items"></span> pictures
                             prepend(this);
                         that.add(a);
                         that._fetchDone();
+                        that.updateIndicator();
                     }).
                     error(function() {
                         $(this).remove();
@@ -110,7 +127,14 @@ here for: <span id="time"></span>, watched <span id="items"></span> pictures
             } else {
                 retry();
             }
-        }
+        };
+        this.update = function() {
+            this.updateIndicator();
+            Cache.prototype.update.call(this);
+        };
+        this.updateIndicator = function() {
+            $("#indicator").css("width", this.fillStatus() * 100 + "%");
+        };
     }
 
     ImgCache.prototype = new Cache();
@@ -131,54 +155,64 @@ here for: <span id="time"></span>, watched <span id="items"></span> pictures
 
     var getImgFromA = function(a) { return $(a).children(":first"); };
 
-    var showImage = function(img, notimer) {
-        img.slideDown(1000, function() {
+    var showImage = function(img) {
+        img.slideDown(500, function() {
             items++;
-            if (!notimer) continueLoop();
+            if (!paused) continueLoop();
         });
     }
 
     var loop = function() {
         if (!paused) {
-            while (nodes.length > maxEntries) {
-                $(nodes[0]).remove();
-                nodes.splice(0, 1);
-            }
-
-            var a = imgCache.get();
-            if (a !== null) {
-                var img = getImgFromA(a);
-                $('#container').prepend(a);
-                nodes.push($(a));
-                showImage($(img));
-            } else {
-                continueLoop();
-            }
+            showNextImage();
         }
     }
 
-    var invalidKeys = [32, 33, 34, 35, 36, 38, 40, 144];
+    var showNextImage = function() {
+        while (nodes.length > maxEntries) {
+            $(nodes[0]).remove();
+            nodes.splice(0, 1);
+        }
+
+        var a = imgCache.get();
+        if (a !== null) {
+            var img = getImgFromA(a);
+            $('#container').prepend(a);
+            nodes.push($(a));
+            showImage($(img));
+        } else if (!paused) {
+            continueLoop();
+        }
+    }
+
+    var invalidKeys = [18/*tab*/, 32, 33, 34, 35, 36, 38, 144];
+    var nextKeys = [39/*right*/, 40/*down*/, 74/*j*/, 76/*l*/];
     //f1...f12
     for (var i = 112; i <= 123; i++) {
         invalidKeys.push(i);
     }
 
     var keyEvents = function() {
-        $(document).keypress(function(evt) {
+        var keyHandler = function(evt) {
             var key = evt.which || evt.keyCode;
             if (invalidKeys.indexOf(key) === -1) {
-                if (paused) {
+                if (nextKeys.indexOf(key) !== -1) {
+                    showNextImage();
+                } else if (paused) {
                     paused = false;
                     loop();
                     $('#paused').text("unpaused");
+                    $('#toggler').removeClass("paused", 250);
                 } else {
                     paused = true;
                     if (timer) clearTimeout(timer);
                     timer = null;
                     $('#paused').text("paused");
+                    $('#toggler').addClass("paused", 250);
                 }
-            } else console.log("ignore key: " + key);
-        });
+            }
+        }
+        $(document).keydown(keyHandler);
     }
 
     var printStatus = function() {
@@ -227,6 +261,26 @@ here for: <span id="time"></span>, watched <span id="items"></span> pictures
         loop();
         keyEvents();
         printStatus();
+        var hideTimer = null;
+        var showing = false;
+        $("#toggler").mouseenter(function() {
+            clearTimeout(hideTimer);
+            if (!showing) {
+                showing = true;
+                $("#effect").removeClass("closed", 500, function() {
+                    showing = false;
+                });
+            }
+        });
+        $("#effect").mouseover(function() {
+            clearTimeout(hideTimer);
+        });
+        $("#effect").mouseout(function() {
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(function() {
+                $("#effect").addClass("closed", 500);
+            }, 1000);
+        });
     });
 </script>
 </body>

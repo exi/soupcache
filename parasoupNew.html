@@ -1,16 +1,29 @@
 <html>
 <head>
-    <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css"/>
+    <title>Infinite pictures scolling by</title>
+    <meta name="description" content="Infinite pictures scrolling by">
+    <meta name="keywords" content="soup.io, parasoup, funny pictures, scrolling">
+    <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css">
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
     <style type="text/css">
-        #slider { width: 250px;float: left; margin-right: 10px;}
+        #slider { width: 250px; float: left; margin-right: 10px;}
+        #toggler { width: 100%; height: 5px; z-index: 10; background-color: grey; }
+        #effect { padding: 0.4em; position: relative; height: 100px; width: 100%; position: absolute; top: 0px; left: 0px; }
+        #effect h3 { margin: 0; padding: 0.4em; text-align: center; }
     </style>
 </head>
-<body>
-<div id="slider"></div>
-picture delay: <span id="delay"></span>;pause with any <u>letter</u>,click on images for similarity search, <a href="http://www.parasoup.de">click here to visit soup</a>, currently: <u><span id="paused">unpaused</span></u>.
-you are here for: <span id="time"></span> and watched <span id="items"></span> pictures;
+<body style="margin: 0;">
+<div id="toggler">
+<div id="effect" class="ui-widget-content ui-corner-all">
+    <h3 class="ui-widget-header ui-corner-all">Parasoup</h3>
+    <p>
+    <div id="slider"></div>
+    picture delay: <span id="delay"></span>, pause with any key,click image for search, <a href="http://www.parasoup.de">click here for soup</a>, <u><span id="paused">unpaused</span></u>.
+    here for: <span id="time"></span>, watched <span id="items"></span> pictures
+    </p>
+</div>
+</div>
 <div id="container"></div>
 <script type="text/javascript">
     var Cache = function() {
@@ -60,7 +73,7 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
         this.fetch = function() {
             var that = this;
             $.ajax({
-                url: "http://" + window.location.hostname + "/newStuff",
+                url: "http://" + window.location.hostname + "/newStuff?",
                 success: function(data, textStatus, xhr) {
                     if (xhr.status == 200) {
                         that.add(data);
@@ -128,38 +141,52 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
 
     var getImgFromA = function(a) { return $(a).children(":first"); };
 
-    var showImage = function(img, notimer) {
+    var showImage = function(img) {
         img.slideDown(1000, function() {
             items++;
-            if (!notimer) continueLoop();
+            if (!paused) continueLoop();
         });
     }
 
     var loop = function() {
         if (!paused) {
-            while (nodes.length > maxEntries) {
-                $(nodes[0]).remove();
-                nodes.splice(0, 1);
-            }
-
-            var a = imgCache.get();
-            if (a !== null) {
-                var img = getImgFromA(a);
-                $('#container').prepend(a);
-                nodes.push($(a));
-                showImage($(img));
-                console.log("a");
-            } else {
-                console.log("no a");
-                continueLoop();
-            }
+            showNextImage();
         }
     }
 
+    var showNextImage = function() {
+        while (nodes.length > maxEntries) {
+            $(nodes[0]).remove();
+            nodes.splice(0, 1);
+        }
+
+        var a = imgCache.get();
+        if (a !== null) {
+            var img = getImgFromA(a);
+            $('#container').prepend(a);
+            nodes.push($(a));
+            showImage($(img));
+        } else if (!paused) {
+            continueLoop();
+        }
+    }
+
+    var invalidKeys = [18/*tab*/, 32, 33, 34, 35, 36, 38, 144];
+    var nextKeys = [39/*right*/, 40/*down*/, 74/*j*/, 76/*l*/];
+    //f1...f12
+    for (var i = 112; i <= 123; i++) {
+        invalidKeys.push(i);
+    }
+
     var keyEvents = function() {
-        $(document).keypress(function(evt) {
-            if (evt.which >= 97 && evt.which <= 122) {
-                if (paused) {
+        var keyHandler = function(evt) {
+            var key = evt.which || evt.keyCode;
+            console.log(nextKeys.indexOf(key) + " " + key);
+            if (invalidKeys.indexOf(key) === -1) {
+                if (nextKeys.indexOf(key) !== -1) {
+                    console.log("nextimage");
+                    showNextImage();
+                } else if (paused) {
                     paused = false;
                     loop();
                     $('#paused').text("unpaused");
@@ -169,8 +196,9 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
                     timer = null;
                     $('#paused').text("paused");
                 }
-            } else console.log(evt);
-        });
+            } else console.log("ignore key: " + key);
+        }
+        $(document).keydown(keyHandler);
     }
 
     var printStatus = function() {
@@ -197,7 +225,7 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
 
             itemNode.text(items);
 
-            document.title = text + ", " + items + " pictures";
+            document.title = "parasoup.de: " + text + ", " + items + " pictures";
         }, 1000);
     }
 
@@ -219,6 +247,27 @@ you are here for: <span id="time"></span> and watched <span id="items"></span> p
         loop();
         keyEvents();
         printStatus();
+        var hideTimer = null;
+        var showing = false;
+        $("#toggler").mouseenter(function() {
+            clearTimeout(hideTimer);
+            if (!showing) {
+                showing = true;
+                $("#effect").show("blind", 500, function() {
+                    showing = false;
+                });
+            }
+        });
+        $("#effect").mouseover(function() {
+            clearTimeout(hideTimer);
+        });
+        $("#effect").mouseout(function() {
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(function() {
+                $("#effect").hide("blind", 500);
+            }, 1000);
+        });
+        $("#effect").hide();
     });
 </script>
 </body>
