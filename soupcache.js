@@ -25,7 +25,7 @@ var url = require('url'),
 
 var startupComponents = function(options) {
     options.assetLoader = new assetLoader(options);
-    options.stats = { dataCount: {}, redirects: 0, parasoups: 0, parasoupAssetCache: 0, assetCount: 0 };
+    options.stats = { dataCount: {}, redirects: 0, parasoups: 0, parasoupAssetCache: 0, assetCount: 0, requests: 0 };
     options.eventBus = new events.EventEmitter();
 
     // we need this because the browsers will expect port numbers
@@ -35,6 +35,8 @@ var startupComponents = function(options) {
     var parasoupRequestHandler = new parasoupRequest(options);
 
     var onRequest = function(request, response) {
+        options.stats.requests++;
+
         var assetRegex = new RegExp(".*\\.asset\\." + options.domain),
             statusRegex = new RegExp("status\\." + options.domain),
             parasoupRegex = new RegExp("^" + options.domain + "$"),
@@ -61,8 +63,17 @@ var startupComponents = function(options) {
     var statusProvider = [];
 
     statusProvider.push(function() {
-        return 'redirects: ' + options.stats.redirects || 0;
-    });
+        var start = new Date();
+        return function() {
+            var now = new Date();
+            var diff = (now - start) / 1000 / 60;
+            var s = 'redirects: ' + ( options.stats.redirects || 0 ) + '\n';
+            var reqs = ( options.stats.requests || 0 );
+            var rpm = Math.floor(( reqs / diff ) * 10) / 10;
+            s += 'requests: ' + reqs + ' ' + rpm + '/min';
+            return s;
+        };
+    } ());
 
     statusProvider.push(options.assetLoader.getStatus);
 

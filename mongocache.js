@@ -72,7 +72,8 @@ module.exports = function(options, initcb) {
             filename,
             mimeType,
             {
-                access: new Date()
+                access: new Date(),
+                accessCount: 1
             },
             function(gridstore) {
                 gridstore.write(
@@ -101,12 +102,21 @@ module.exports = function(options, initcb) {
                         } else {
                             gs.close(function() {
                                 cb(null, new Buffer(data), type);
+                                gs.collection(function(err, collection) {
+                                    if (!err) {
+                                        increaseAccessCount(filename, collection);
+                                    }
+                                });
                             });
                         }
                     });
                 }
             });
         });
+    };
+
+    var increaseAccessCount = function(filename, collection) {
+        collection.update({ "filename": filename }, { $inc: { "metadata.accessCount": 1 } });
     };
 
     var getMimeTypeFromDb = function(filename, cb) {
