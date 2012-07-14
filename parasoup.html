@@ -33,7 +33,7 @@
     var Cache = function() {
         this.name = "default";
         this.constructor = function(cacheSize) {
-            this._cacheSize = cacheSize || 10;
+            this._cacheSize = cacheSize || 20;
             this._store = [];
             this._requestInProgress = false;
             this.update();
@@ -185,7 +185,7 @@
         }
     }
 
-    var invalidKeys = [18/*tab*/, 32, 33, 34, 35, 36, 38, 144];
+    var invalidKeys = [17/*ctrl*/, 18/*tab*/, 32, 33, 34, 35, 36, 38, 144];
     var nextKeys = [39/*right*/, 40/*down*/, 74/*j*/, 76/*l*/];
     //f1...f12
     for (var i = 112; i <= 123; i++) {
@@ -196,6 +196,7 @@
         var keyHandler = function(evt) {
             var key = evt.which || evt.keyCode;
             if (invalidKeys.indexOf(key) === -1) {
+                console.log(key);
                 if (nextKeys.indexOf(key) !== -1) {
                     showNextImage();
                 } else if (paused) {
