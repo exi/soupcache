@@ -75,8 +75,6 @@ var startupComponents = function(options) {
         };
     } ());
 
-    statusProvider.push(options.assetLoader.getStatus);
-
     statusProvider.push(function() {
         var start = new Date();
         return function() {
@@ -104,20 +102,24 @@ var startupComponents = function(options) {
 
             var now = new Date();
             var diff = (now - start) / 1000 / 60;
+            var sdiff = (now - start) / 1000;
             var served = ( options.stats.parasoups || 0 );
             var spm = Math.floor(( served / diff ) * 10) / 10;
-            var bpm = Math.floor(( sumBytes / diff ) * 10) / 10;
+            var bpm = Math.floor(( sumBytes / sdiff ) * 10) / 10;
 
             var status = "";
 
-            status += "total data served: " + convertToHumanReadable(sumBytes) + " " + convertToHumanReadable(bpm) + "/min\n";
+            status += "total data served: " + convertToHumanReadable(sumBytes) + " " + convertToHumanReadable(bpm) + "/s\n";
             status += "assets on server: " + options.stats.assetCount + "\n";
             status += "parasoups served: " + served + " " + spm + "/min\n";
-            status += "parasoup asset cache: " + options.stats.parasoupAssetCache + "\n";
+            status += "parasoup asset cache: " + options.stats.parasoupAssetCache;
 
             return status;
         };
     } ());
+
+    statusProvider.push(options.assetLoader.getStatus);
+
 
     options.statPrinter = new statPrinter(statusProvider);
 
