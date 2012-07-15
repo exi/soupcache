@@ -26,7 +26,7 @@
     <p>
     <div id="slider"></div>
     picture delay: <span id="delay"></span>. Pause with any key. Click image for search, <a href="http://www.parasoup.de">click here for soup</a>. <u><span id="paused">unpaused</span></u>.
-    here for: <span id="time"></span>, watched <span id="items"></span> pictures. You can trigger "next Image" with j, l, left/down arraw, even in paused mode.
+    here for: <span id="time"></span>, watched <span id="items"></span> pictures. You can trigger "next Image" with j, l, left/down arrow, even in paused mode.
     </p>
 </div>
 </div>
@@ -187,9 +187,8 @@
         }
     }
 
-    var invalidKeys = [17/*ctrl*/, 18/*tab*/, 32, 33, 34, 35, 36, 38, 144];
+    var invalidKeys = [17/*ctrl*/, 18/*tab*/, 91/*win*/, 32, 33, 34, 35, 36, 38, 144];
     var nextKeys = [39/*right*/, 40/*down*/, 74/*j*/, 76/*l*/];
-    //f1...f12
     for (var i = 112; i <= 123; i++) {
         invalidKeys.push(i);
     }
