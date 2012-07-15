@@ -8,18 +8,20 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
     <style type="text/css">
         #slider { width: 250px; margin-right: 10px;}
-        #toggler { width: 100%; height: 4px; z-index: 10; background-color: grey;}
+        #toggler { width: 100%; z-index: 10; background-color: grey; }
         #indicator { width: 100%; height: 2px; background-color: blue;}
+        #indicator2 { width: 100%; height: 2px; background-color: grey;}
         .paused { background-color: red !important; }
-        #effect { height: 120px; width: 100%; position: absolute; top: 2px; left: 0px; overflow: hidden; }
-        #effect.closed { height: 0px; border: 0px; }
+        #effect { height: 120px; width: 100%; overflow: hidden; position: absolute; background-color: white; border-bottom: 2px solid grey; }
+        #effect.closed { height: 0px; }
         #effect h3 { margin: 0; padding: 5px; text-align: center; }
     </style>
 </head>
 <body style="margin: 0;">
 <div id="toggler">
 <div id="indicator"> </div>
-<div id="effect" class="ui-widget-content ui-corner-all closed">
+<div id="indicator2"> </div>
+<div id="effect">
     <h3 class="ui-widget-header ui-corner-all">Parasoup</h3>
     <p>
     <div id="slider"></div>
@@ -203,13 +205,13 @@
                     paused = false;
                     loop();
                     $('#paused').text("unpaused");
-                    $('#toggler').removeClass("paused", 250);
+                    $('#indicator2').removeClass("paused", 250);
                 } else {
                     paused = true;
                     if (timer) clearTimeout(timer);
                     timer = null;
                     $('#paused').text("paused");
-                    $('#toggler').addClass("paused", 250);
+                    $('#indicator2').addClass("paused", 250);
                 }
             }
         }
@@ -276,12 +278,16 @@
         $("#effect").mouseover(function() {
             clearTimeout(hideTimer);
         });
-        $("#effect").mouseout(function() {
+        var setHideTimer = function() {
             clearTimeout(hideTimer);
             hideTimer = setTimeout(function() {
                 $("#effect").addClass("closed", 500);
             }, 1000);
+        };
+        $("#effect").mouseout(function() {
+            setHideTimer();
         });
+        setHideTimer();
     });
 </script>
 </body>
