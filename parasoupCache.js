@@ -30,9 +30,12 @@ var createCache = function(options, initcb) {
                                 {
                                     "_id": 1,
                                     "filename": 1
+                                },
+                                {
+                                    limit: 1,
+                                    skip: randomNumber
                                 }
-                            ).limit(1)
-                            .skip(randomNumber).nextObject(
+                            ).nextObject(
                                 function(err, doc) {
                                     if (err) {
                                         cb(err);

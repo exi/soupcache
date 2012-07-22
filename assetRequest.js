@@ -34,6 +34,7 @@ var mod = function(options) {
                     });
                     options.stats.dataCount[request.connection.remoteAddress] += buffer.length;
                     response.end(buffer, 'binary');
+                    options.logger.access(request, httpStatusCode, buffer.length);
                 } catch (e) {
                     // client missing or something
                 }

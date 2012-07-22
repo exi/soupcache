@@ -22,8 +22,7 @@ var mod = function(options) {
             } else if (cache !== null) {
                 cache.insert(url, function(err) {
                     if (err) {
-                        console.error(err.message);
-                        console.error(err.stack);
+                        options.logger.error('cacheInsert ' + url, err);
                     } else {
                         cacheSize++;
                         updateStats();
@@ -47,6 +46,7 @@ var mod = function(options) {
                 );
                 clients[i].response.end(response);
                 served++;
+                options.logger.access(clients[i].request, 200, response.length);
                 updateStats();
             } catch (e) {
                 //dont care
@@ -69,25 +69,23 @@ var mod = function(options) {
 
     var deliverDataIfNecessary = function(cb) {
         if (clients.length === 0) {
-            cb();
+            return cb();
         } else {
             getCacheSize(function(err, size) {
                 if (err) {
-                    console.error(err.message);
-                    console.error(err.stack);
+                    options.logger.error('getCacheSize', err)
                 } else if (size > 0) {
                     cache.getAndRemoveItem(function(err, url) {
                         if (err) {
-                            console.error(err.message);
-                            console.error(err.stack);
-                            cb();
+                            options.logger.error('getAndRemoveItem', err)
+                            return cb(null);
                         } else {
                             deliverToClients(url);
-                            cb();
+                            return cb(null);
                         }
                     });
                 } else {
-                    cb();
+                    return cb(null);
                 }
             });
         }

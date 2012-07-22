@@ -82,7 +82,7 @@ var assetDownload = function(mirror, url, options, callback) {
         if (res.statusCode >= 300 && res.statusCode < 400) {
             url = getUrl(res.headers.location);
             if (originalUrl == url) {
-                console.error("endless redirect detected...");
+                options.logger.error("endless redirect detected...");
                 errorFinish(404);
             } else if (!hasSaneConditions()) {
                 errorFinish(404);
@@ -97,7 +97,7 @@ var assetDownload = function(mirror, url, options, callback) {
                 redirects++;
                 fetchFileAndFinish();
             } else {
-                console.error("aborting asset request because of too many redirects");
+                options.logger.error("aborting asset request because of too many redirects");
                 soupRequest.abort();
                 errorFinish(404);
             }
@@ -114,7 +114,7 @@ var assetDownload = function(mirror, url, options, callback) {
     };
 
     var onRequestTimeout = function() {
-        console.log("timeout...retry");
+        options.logger.log("assedDownload timeout...retry");
         fetchFileAndFinish();
     };
 
@@ -122,10 +122,8 @@ var assetDownload = function(mirror, url, options, callback) {
         if (tries > 10) {
             errorFinish();
         } else {
-            console.error(error.message);
-            console.error(error.stack);
             tries++;
-            console.error("asset retry(" + tries + ") '" + url +"'");
+            options.logger.error("asset retry(" + tries + ") '" + url +"'", error);
             setTimeout(fetchFileAndFinish, 500);
         }
     };
@@ -140,11 +138,10 @@ var assetDownload = function(mirror, url, options, callback) {
             fileWritten += Buffer.byteLength(chunk, 'binary');
             idleDate = new Date();
         } catch (e) {
-            console.error(e.message);
-            console.error(e.stack);
-            console.error("fileWritten: " + fileWritten);
-            console.error("fileSize: " + fileSize);
-            console.error("bufferlength: " + fileBuffer.length);
+            var msg = "fileWritten: " + fileWritten + "\n" +
+                        "fileSize: " + fileSize + "\n" +
+                        "bufferlength: " + fileBuffer.length;
+            options.logger.error(msg, e);
             errorFinish(500);
         }
     };
@@ -162,8 +159,7 @@ var assetDownload = function(mirror, url, options, callback) {
                 var newbuf = new Buffer(fileBuffer).slice(0, fileWritten);
                 callback(originalUrl, newbuf, statusCode, mimeType);
             } catch (e) {
-                console.error(e.message);
-                console.error(e.stack);
+                options.logger.error("assetDownloadFinish", e);
                 errorFinish();
             }
         }
@@ -171,9 +167,7 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var errorFinish = function(status) {
         status = status || 500;
-        console.error(new Date());
-        console.error("errorFinish(" + status + ")");
-        console.trace();
+        options.logger.error("errorFinish(" + status + ")");
         var newbuf = new Buffer(0);
         callback(originalUrl, newbuf, status);
     };
@@ -187,7 +181,7 @@ var assetDownload = function(mirror, url, options, callback) {
             leftTime = Math.floor(leftTime / 10) * 10;
         }
         var mirrorsString = "[" + mirrors.join(",") + "]";
-        return currentMirror + url + " \t" + (tries + 1) + " tries \t" +
+        return "http://" + currentMirror + url + " \t" + (tries + 1) + " tries \t" +
             waitingTime + "/" + leftTime + "s \t" + fileWritten + "/" + fileSize + " \t mirrors:" + mirrorsString + "\t" + that.getStatusBar();
     };
 

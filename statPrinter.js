@@ -1,4 +1,4 @@
-var mod = function(statusProvider) {
+var mod = function(statusProvider, statsPerSecond) {
     var lastOutput = "";
 
     var start = new Date();
@@ -25,7 +25,7 @@ var mod = function(statusProvider) {
         }
     }
 
-    setInterval(print, 250);
+    setInterval(print, Math.floor(1000 / statsPerSecond));
 
     return {
         getStatus: function() {

@@ -91,17 +91,24 @@ module.exports = function(options, initcb) {
     };
 
     var readFileAndTypeFromDb = function(filename, cb) {
+        var start = new Date();
         openDbFileRead(filename, function(gs) {
             gs.read(function(err, data) {
                 if (err) {
+                    options.logger.error("gridstoreRead " + filename, err);
                     cb(err);
                 } else {
                     getTypeFromGridStore(gs, function(err, type) {
                         if (err) {
+                            options.logger.error("gettypeFromGridStore " + filename, err);
                             cb(err);
                         } else {
+                            var diff = Math.floor(( new Date() ) - start);
+                            if (diff > 500) {
+                                options.logger.error("query for " + filename + " took " + diff + "ms");
+                            }
+                            cb(null, new Buffer(data), type);
                             gs.close(function() {
-                                cb(null, new Buffer(data), type);
                                 gs.collection(function(err, collection) {
                                     if (!err) {
                                         increaseAccessCount(filename, collection);
@@ -116,7 +123,7 @@ module.exports = function(options, initcb) {
     };
 
     var increaseAccessCount = function(filename, collection) {
-        collection.update({ "filename": filename }, { $inc: { "metadata.accessCount": 1 } });
+        collection.update({ "filename": filename }, { $inc: { "metadata.accessCount": 1 }, $set: { "metadata.access": new Date()} });
     };
 
     var getMimeTypeFromDb = function(filename, cb) {

@@ -14,6 +14,7 @@ var mod = function(options) {
                 'Content-Type': 'text/html'
             });
             response.end(html);
+            options.logger.access(request, 200, html.length);
         };
 };
 
