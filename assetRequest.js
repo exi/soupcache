@@ -37,6 +37,7 @@ var mod = function(options) {
                     options.logger.access(request, httpStatusCode, buffer.length);
                 } catch (e) {
                     // client missing or something
+                    console.error("assetDownload", e);
                 }
             };
 

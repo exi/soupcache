@@ -167,7 +167,7 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var errorFinish = function(status) {
         status = status || 500;
-        options.logger.error("errorFinish(" + status + ")");
+        options.logger.error("errorFinish(" + status + ") " + originalUrl);
         var newbuf = new Buffer(0);
         callback(originalUrl, newbuf, status);
     };

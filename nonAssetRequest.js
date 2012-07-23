@@ -154,9 +154,15 @@ var mod = function(options) {
                     replace(/https:\/\//g, "http://");
             }
 
+            var insertProxyNote = function(inputdata) {
+                return inputdata.
+                    replace(/<ul id="menu">/g, '<ul id="menu" style="padding-left: 0px !important; margin-left: -200px !important;"><li style="background-color: red; font-size: 18pt; color: black;"><div style="padding: 8px 14px;">THIS IS A PROXY NOT THE REAL SOUP</div></li>');
+            }
+
             var modifyHtmlAndReturnBuffer = function(inputdata) {
                 var lines = inputdata.split("\n");
                 for (var i in lines) {
+                    lines[i] = insertProxyNote(lines[i]);
                     if (lines[i].search(/Permalink/) == -1) {
                         lines[i] = replaceSoupLinksInString(lines[i]);
                     }
