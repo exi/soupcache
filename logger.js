@@ -52,9 +52,15 @@ Logger.prototype.access = function(request, httpStatus, dataLength) {
     if (request && request.method && request.url && request.httpVersion) {
         var connectionLine = [request.method, request.url, 'HTTP/' + request.httpVersion].join(' ');
         var virtualhost = "parasoup.de";
-        if (request.headers && request.headers.host) {
-            virtualhost = request.headers.host;
+        var userAgent = "-";
+        var referer = "-";
+
+        if (request.headers) {
+            virtualhost = request.headers.host || virtualhost;
+            userAgent = request.headers['user-agent'] ? '[' + request.headers['user-agent'] + ']' : userAgent;
+            referer = request.headers['referer'] || referer;
         }
+
         var parts = [
             request.connection.remoteAddress || "0.0.0.0",
             "-",
@@ -62,8 +68,10 @@ Logger.prototype.access = function(request, httpStatus, dataLength) {
             this.getLogDate(),
             '"' + connectionLine + '"',
             httpStatus,
-            dataLength,
-            virtualhost
+            dataLength || 0,
+            virtualhost,
+            userAgent,
+            referer
         ];
         this.accessStream.write(parts.join(" ") + '\n');
     }

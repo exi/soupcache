@@ -101,6 +101,9 @@ var assetDownload = function(mirror, url, options, callback) {
                 soupRequest.abort();
                 errorFinish(404);
             }
+        } else if (res.statusCode >= 500) {
+            soupRequest.abort();
+            retry(1000);
         } else {
             res.setEncoding('binary');
             var contentLength = parseInt(res.headers['content-length']);
@@ -115,18 +118,23 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var onRequestTimeout = function() {
         options.logger.log("assedDownload timeout...retry");
-        fetchFileAndFinish();
+        retry();
     };
 
     var onError = function(error) {
         if (tries > 10) {
             errorFinish();
         } else {
-            tries++;
-            options.logger.error("asset retry(" + tries + ") '" + url +"'", error);
-            setTimeout(fetchFileAndFinish, 500);
+            retry();
         }
     };
+
+    var retry = function(waitTime) {
+        waitTime = waitTime || 500;
+        tries++;
+        options.logger.error("asset retry(" + tries + ") '" + url +"' next in " + waitTime + "ms");
+        setTimeout(fetchFileAndFinish, waitTime);
+    }
 
     var onFileData = function(chunk) {
         if (fileBuffer === null) {
