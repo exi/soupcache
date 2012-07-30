@@ -12,7 +12,7 @@ var assetDownload = function(mirror, url, options, callback) {
     var fileWritten = 0;
     var fileSize = 0;
     var mimeType = null;
-    var idleDate = new Date();
+    var startDate = new Date();
     var soupRequest = null;
     var statusCode = 200;
     var originalUrl = url;
@@ -50,14 +50,16 @@ var assetDownload = function(mirror, url, options, callback) {
     };
 
     var setAbortTimer = function() {
-        clearAbortTimer();
-        abortTimer = setTimeout(
-            function() {
-                errorFinish(500)
-            },
-            maxDownloadTime
-        );
-        abortTimerTime = new Date((new Date()).getTime() + maxDownloadTime);
+        if (!abortTimer) {
+            abortTimer = setTimeout(
+                function() {
+                    options.logger.error("aborting asset download");
+                    errorFinish(500);
+                },
+                maxDownloadTime
+            );
+            abortTimerTime = new Date((new Date()).getTime() + maxDownloadTime);
+        }
     };
 
     var clearAbortTimer = function() {
@@ -66,7 +68,7 @@ var assetDownload = function(mirror, url, options, callback) {
             abortTimer = null;
             abortTimerTime = null;
         }
-    }
+    };
 
     var getUrl = function(href) {
         var newUrl = Url.parse(Url.resolve(url, href));
@@ -98,12 +100,12 @@ var assetDownload = function(mirror, url, options, callback) {
                 fetchFileAndFinish();
             } else {
                 options.logger.error("aborting asset request because of too many redirects");
-                soupRequest.abort();
                 errorFinish(404);
             }
         } else if (res.statusCode >= 500) {
+            options.stats.soupErrors++;
             soupRequest.abort();
-            retry(1000);
+            retry();
         } else {
             res.setEncoding('binary');
             var contentLength = parseInt(res.headers['content-length']);
@@ -122,16 +124,15 @@ var assetDownload = function(mirror, url, options, callback) {
     };
 
     var onError = function(error) {
-        if (tries > 10) {
-            errorFinish();
-        } else {
-            retry();
-        }
+        retry();
     };
 
-    var retry = function(waitTime) {
-        waitTime = waitTime || 500;
+    var retry = function() {
         tries++;
+        var now = new Date();
+        var x = now.getTime() - startDate.getTime();
+        var xdm = x / maxDownloadTime;
+        var waitTime = Math.floor(Math.sin(xdm / 2) * (maxDownloadTime - x));
         options.logger.error("asset retry(" + tries + ") '" + url +"' next in " + waitTime + "ms");
         setTimeout(fetchFileAndFinish, waitTime);
     }
@@ -144,13 +145,12 @@ var assetDownload = function(mirror, url, options, callback) {
         try {
             fileBuffer.write(chunk, fileWritten, 'binary');
             fileWritten += Buffer.byteLength(chunk, 'binary');
-            idleDate = new Date();
         } catch (e) {
             var msg = "fileWritten: " + fileWritten + "\n" +
                         "fileSize: " + fileSize + "\n" +
                         "bufferlength: " + fileBuffer.length;
             options.logger.error(msg, e);
-            errorFinish(500);
+            errorFinish(500, e);
         }
     };
 
@@ -161,36 +161,39 @@ var assetDownload = function(mirror, url, options, callback) {
     var finish = function() {
         clearAbortTimer();
         if (fileBuffer === null) {
-            errorFinish();
+            options.logger.error("file Buffer empty");
+            retry();
         } else {
             try {
                 var newbuf = new Buffer(fileBuffer).slice(0, fileWritten);
                 callback(originalUrl, newbuf, statusCode, mimeType);
             } catch (e) {
                 options.logger.error("assetDownloadFinish", e);
-                errorFinish();
+                retry();
             }
         }
     };
 
-    var errorFinish = function(status) {
+    var errorFinish = function(status, error) {
         status = status || 500;
-        options.logger.error("errorFinish(" + status + ") " + originalUrl);
+        if (soupRequest) {
+            try {
+                soupRequest.abort();
+            } catch (err) {
+                options.logger.error("assed errorFinish", err);
+            }
+        }
+        options.logger.error("errorFinish(" + status + ") " + originalUrl, error);
         var newbuf = new Buffer(0);
         callback(originalUrl, newbuf, status);
     };
 
     that.getStatus = function() {
-        var waitingTime = ((new Date()).getTime() - idleDate.getTime()) / 1000;
+        var waitingTime = ((new Date()).getTime() - startDate.getTime()) / 1000;
         waitingTime = Math.floor(waitingTime / 10) * 10;
-        var leftTime = 0;
-        if (abortTimerTime) {
-            leftTime = (abortTimerTime.getTime() - (new Date()).getTime()) / 1000;
-            leftTime = Math.floor(leftTime / 10) * 10;
-        }
         var mirrorsString = "[" + mirrors.join(",") + "]";
         return "http://" + currentMirror + url + " \t" + (tries + 1) + " tries \t" +
-            waitingTime + "/" + leftTime + "s \t" + fileWritten + "/" + fileSize + " \t mirrors:" + mirrorsString + "\t" + that.getStatusBar();
+            waitingTime + "/" + (maxDownloadTime / 1000) + "s \t" + fileWritten + "/" + fileSize + " \t mirrors:" + mirrorsString + "\t" + that.getStatusBar();
     };
 
     that.getStatusBar = function() {

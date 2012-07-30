@@ -41,7 +41,7 @@ function requestDispatcher(request, response) {
 
 function startupComponents(options) {
     options.assetLoader = new assetLoader(options);
-    options.stats = { dataCount: {}, redirects: 0, parasoups: 0, parasoupAssetCache: 0, assetCount: 0, requests: 0 };
+    options.stats = { dataCount: {}, redirects: 0, parasoups: 0, parasoupAssetCache: 0, assetCount: 0, requests: 0, soupErrors: 0 };
     options.eventBus = new events.EventEmitter();
 
     // we need this because the browsers will expect port numbers
@@ -129,7 +129,8 @@ function startupComponents(options) {
             status += "total data served: " + convertToHumanReadable(sumBytes) + " " + convertToHumanReadable(bps) + "/s\n";
             status += "assets on server: " + options.stats.assetCount + "\n";
             status += "parasoups served: " + served + " " + sps + "/s\n";
-            status += "parasoup asset cache: " + options.stats.parasoupAssetCache;
+            status += "parasoup asset cache: " + options.stats.parasoupAssetCache + "\n";
+            status += "soup server errors: " + options.stats.soupErrors;
 
             return status;
         };

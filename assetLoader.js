@@ -9,7 +9,6 @@ var mod = function(options) {
     var activeDownloads = {};
     var callbacks = {};
     var downloadCount = 0;
-    var soupErrors = 0;
     var servedCount = 0;
     var responseTimes = [];
     var responseCount = 0;
@@ -64,7 +63,7 @@ var mod = function(options) {
                     mimeType.search(/text/) != -1 ||
                     httpStatusCode < 200 ||
                     httpStatusCode >= 300) {
-                soupErrors++;
+                options.stats.soupErrors++;
             } else {
                 process.nextTick(function() {
                     cacheHandler.insertFileBuffer(url, buffer, mimeType, function(err) {
@@ -88,7 +87,6 @@ var mod = function(options) {
         status += "assets served: " + servedCount + "\n";
         status += "downloaded: " + downloadCount + "\n";
         status += "cache efficiency: " + Math.round((servedCount / downloadCount) * 1000) / 1000 + "\n";
-        status += "soup server errors: " + soupErrors + "\n";
         if (responseCount > 0) {
             var averageResponseTime = 0;
             var responseDataSize = responseCount < responseBackLog ? responseCount : responseBackLog;
