@@ -132,9 +132,13 @@ var assetDownload = function(mirror, url, options, callback) {
         var now = new Date();
         var x = now.getTime() - startDate.getTime();
         var xdm = x / maxDownloadTime;
-        var waitTime = Math.floor(Math.sin(xdm / 2) * (maxDownloadTime - x));
+        var waitTime = Math.max(Math.floor(Math.sin(xdm / 2) * (maxDownloadTime - x)), 1000);
         options.logger.error("asset retry(" + tries + ") '" + url +"' next in " + waitTime + "ms");
-        setTimeout(fetchFileAndFinish, waitTime);
+        if (x + waitTime < maxDownloadTime) {
+            setTimeout(fetchFileAndFinish, waitTime);
+        } else {
+            errorFinish(500);
+        }
     }
 
     var onFileData = function(chunk) {
