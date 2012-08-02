@@ -164,11 +164,15 @@ var assetDownload = function(mirror, url, options, callback) {
 
     var finish = function() {
         clearAbortTimer();
-        if (fileBuffer === null) {
+        if (fileBuffer === null && (statusCode < 200 || statusCode >= 300)) {
             options.logger.error("file Buffer empty");
             retry();
         } else {
             try {
+                if (fileBuffer === null) {
+                    //this happens if soup responds with an empty file and 200 status code, which is ok i guess
+                    fileBuffer = "";
+                }
                 var newbuf = new Buffer(fileBuffer).slice(0, fileWritten);
                 callback(originalUrl, newbuf, statusCode, mimeType);
             } catch (e) {
