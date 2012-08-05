@@ -5,7 +5,7 @@ var AverageRing = function(size, calculateDiff) {
     this.full = false;
     this.ring = new Array(this.size);
     this.lastValue = 0;
-    this.calcDiff = calculateDiff === undefined ? true : true;
+    this.calcDiff = calculateDiff === undefined ? true : false;
 };
 
 AverageRing.prototype.add = function(value) {
