@@ -10,7 +10,12 @@ var fs = require('fs'),
     Binary = require('mongodb').Binary,
     GridStore = require('mongodb').GridStore,
     Code = require('mongodb').Code,
-    BSON = require('mongodb').pure().BSON;
+    BSON = require('mongodb').pure().BSON
+    cacheSize = 5000,
+    cacheMap = {},
+    cacheList = new Array(cacheSize),
+    cachePos = 0,
+    cacheFull = false;
 
 var rootCollection = "parasoup";
 
@@ -23,6 +28,39 @@ module.exports = function(options, initcb) {
 
     var sanitizeFileName = function(filename) {
         return encodeURIComponent(filename);
+    };
+
+    var addToCache = function(filename, data, contentType) {
+        if (cacheMap.hasOwnProperty(filename)) {
+            return;
+        }
+
+        var item = {
+            filename: filename,
+            contentType: contentType,
+            data: data
+        };
+
+        if (cacheFull) {
+            delete cacheMap[cacheList[cachePos].filename];
+        }
+        cacheList[cachePos] = item;
+        cacheMap[filename] = cachePos;
+        cachePos++;
+
+        if (cachePos >= cacheSize) {
+            cachePos = 0;
+            cacheFull = true;
+        }
+    };
+
+    var getFromCache = function(filename) {
+        if (!cacheMap.hasOwnProperty(filename)) {
+            return undefined;
+        } else {
+            var item = cacheList[cacheMap[filename]];
+            return item;
+        }
     };
 
     var fileExistsInDb = function(filename, cb) {
@@ -91,8 +129,14 @@ module.exports = function(options, initcb) {
     };
 
     var readFileAndTypeFromDb = function(filename, cb) {
+        var data = getFromCache(filename);
+        if (data !== undefined) {
+            options.stats.cacheHits++;
+            cb(null, data.data, data.contentType);
+            return increaseAccessCount(filename);
+        }
         var start = new Date();
-        openDbFileRead(filename, function(gs) {
+        return openDbFileRead(filename, function(gs) {
             gs.read(function(err, data) {
                 if (err) {
                     options.logger.error("gridstoreRead " + filename, err);
@@ -107,13 +151,11 @@ module.exports = function(options, initcb) {
                             if (diff > 500) {
                                 options.logger.error("query for " + filename + " took " + diff + "ms");
                             }
-                            cb(null, new Buffer(data), type);
+                            var buf = new Buffer(data);
+                            cb(null, buf, type);
                             gs.close(function() {
-                                gs.collection(function(err, collection) {
-                                    if (!err) {
-                                        increaseAccessCount(filename, collection);
-                                    }
-                                });
+                                addToCache(filename, buf, type);
+                                increaseAccessCount(filename);
                             });
                         }
                     });
@@ -122,7 +164,7 @@ module.exports = function(options, initcb) {
         });
     };
 
-    var increaseAccessCount = function(filename, collection) {
+    var increaseAccessCount = function(filename) {
         collection.update({ "filename": filename }, { $inc: { "metadata.accessCount": 1 }, $set: { "metadata.access": new Date()} });
     };
 

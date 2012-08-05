@@ -9,7 +9,6 @@ var mod = function(options) {
     var activeDownloads = {};
     var callbacks = {};
     var downloadCount = 0;
-    var servedCount = 0;
     var responseTimes = [];
     var responseCount = 0;
     var responseBackLog = 100;
@@ -19,7 +18,7 @@ var mod = function(options) {
             if (err) {
                 _download(host, url, callback);
             } else {
-                servedCount++;
+                options.stats.assetsServed++;
                 callback(buffer, mimeType, 200);
             }
         });
@@ -48,7 +47,7 @@ var mod = function(options) {
         var onMimeRequestResponse = function(err, mimeType) {
             for (var i in callbacks[url]) {
                 callbacks[url][i](buffer, err ? 'text/html' : mimeType, httpStatusCode);
-                servedCount++;
+                options.stats.assetsServed++;
             }
 
             delete callbacks[url];
@@ -83,6 +82,7 @@ var mod = function(options) {
     };
 
     that.getStatus = function() {
+        var servedCount = options.stats.assetsServed;
         var status = "";
         status += "assets served: " + servedCount + "\n";
         status += "downloaded: " + downloadCount + "\n";

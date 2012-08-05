@@ -3,6 +3,7 @@ var url = require('url'),
 
 var mod = function(options) {
         return function(request, response) {
+            var start = new Date();
             var that = this;
 
             that.getSubDomain = function() {
@@ -34,6 +35,7 @@ var mod = function(options) {
                     });
                     options.stats.dataCount[request.connection.remoteAddress] += buffer.length;
                     response.end(buffer, 'binary');
+                    options.stats.responseTime += new Date() - start;
                     options.logger.access(request, httpStatusCode, buffer.length);
                 } catch (e) {
                     // client missing or something

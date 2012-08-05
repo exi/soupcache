@@ -5,6 +5,7 @@ var fs = require('fs'),
     Logger = function(options, callback) {
         this.accesslog = options.accesslog;
         this.errorlog = options.errorlog;
+        this.infolog = options.infolog;
         var that = this;
 
         initFiles();
@@ -13,6 +14,7 @@ var fs = require('fs'),
             async.parallel([
                     createStream('accessStream', that.accesslog),
                     createStream('errorStream', that.errorlog),
+                    createStream('infoStream', that.infolog)
                     ], postStreamCreation);
         }
 
@@ -75,6 +77,10 @@ Logger.prototype.access = function(request, httpStatus, dataLength) {
         ];
         this.accessStream.write(parts.join(" ") + '\n');
     }
+}
+
+Logger.prototype.info = function(msg) {
+    this.infoStream.write(this.getLogDate() + ' ' + msg + '\n');
 }
 
 Logger.prototype.console = function(msg) {

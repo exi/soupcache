@@ -27,6 +27,7 @@ var url = require('url'),
         },
         accesslog: "access.log",
         errorlog: "error.log",
+        infolog: "info.log",
         statsPerSecond: 4
     };
 
@@ -41,7 +42,18 @@ function requestDispatcher(request, response) {
 
 function startupComponents(options) {
     options.assetLoader = new assetLoader(options);
-    options.stats = { dataCount: {}, redirects: 0, parasoups: 0, parasoupAssetCache: 0, assetCount: 0, requests: 0, soupErrors: 0 };
+    options.stats = {
+        dataCount: {},
+        redirects: 0,
+        parasoups: 0,
+        parasoupAssetCache: 0,
+        assetCount: 0,
+        requests: 0,
+        soupErrors: 0,
+        assetsServed: 0,
+        responseTime: 0,
+        cacheHits: 0
+    };
     options.eventBus = new events.EventEmitter();
 
     // we need this because the browsers will expect port numbers
@@ -95,6 +107,8 @@ function startupComponents(options) {
         var start = new Date();
         var parasoupRing = new AverageDiffRing(120 * options.statsPerSecond);
         var byteSumRing = new AverageDiffRing(120 * options.statsPerSecond);
+        var cacheHitRing = new AverageDiffRing(120 * options.statsPerSecond);
+        var responseTimeRing = new AverageDiffRing(120 * options.statsPerSecond);
         return function() {
             var maxLines = 10;
             var convertToHumanReadable = function(bytes) {
@@ -118,11 +132,17 @@ function startupComponents(options) {
                 }
             }
 
-            var served = ( options.stats.parasoups || 0 );
+            var served = options.stats.parasoups;
             parasoupRing.add(served);
             byteSumRing.add(sumBytes);
+            cacheHitRing.add(options.stats.cacheHits);
+            responseTimeRing.add(options.stats.responseTime);
             var sps = parasoupRing.getAveragePerTime(2, 1000);
             var bps = byteSumRing.getAveragePerTime(2, 1000);
+            var chps = cacheHitRing.getAveragePerTime(2, 1000);
+            var art = responseTimeRing.getAveragePerTime(2, 1000);
+            var chr = (100 / options.stats.assetsServed) * options.stats.cacheHits;
+            var cacheHitRatio = Math.floor(chr * 100) / 100 ;
 
             var status = "";
 
@@ -130,7 +150,9 @@ function startupComponents(options) {
             status += "assets on server: " + options.stats.assetCount + "\n";
             status += "parasoups served: " + served + " " + sps + "/s\n";
             status += "parasoup asset cache: " + options.stats.parasoupAssetCache + "\n";
-            status += "soup server errors: " + options.stats.soupErrors;
+            status += "memory cache hits: " + options.stats.cacheHits + " " + chps + "/s " + cacheHitRatio + "%\n";
+            status += "soup server errors: " + options.stats.soupErrors + "\n";
+            status += "averageResponseTime: " + art + "ms";
 
             return status;
         };
