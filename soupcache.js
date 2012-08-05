@@ -3,7 +3,7 @@ var url = require('url'),
     fs = require('fs'),
     async = require('async'),
     util = require('util'),
-    AverageDiffRing = require('./averageDiffRing.js'),
+    AverageRing = require('./averageRing.js'),
     server = null,
     onRequest = null,
     Cache = require('./mongocache.js'),
@@ -81,7 +81,7 @@ function startupComponents(options) {
             new statusRequestHandler(request, response);
         } else if (request.headers.host && request.headers.host.match(parasoupRegex)) {
             new parasoupRequestHandler(request, response);
-        } else if (request.headers.host && request.headers.host.match(assetRegex)) {
+        } else if (request.headers.host && request.headers.host.match(assetRegex) && request.url.indexOf("?") === -1) {
             new assetRequestHandler(request, response);
         } else {
             new nonAssetRequestHandler(request, response);
@@ -92,7 +92,7 @@ function startupComponents(options) {
 
     statusProvider.push(function() {
         var start = new Date();
-        var requestRing = new AverageDiffRing(120 * options.statsPerSecond);
+        var requestRing = new AverageRing(120 * options.statsPerSecond);
         return function() {
             var s = 'redirects: ' + ( options.stats.redirects || 0 ) + '\n';
             var reqs = ( options.stats.requests || 0 );
@@ -105,10 +105,10 @@ function startupComponents(options) {
 
     statusProvider.push(function() {
         var start = new Date();
-        var parasoupRing = new AverageDiffRing(120 * options.statsPerSecond);
-        var byteSumRing = new AverageDiffRing(120 * options.statsPerSecond);
-        var cacheHitRing = new AverageDiffRing(120 * options.statsPerSecond);
-        var responseTimeRing = new AverageDiffRing(120 * options.statsPerSecond);
+        var parasoupRing = new AverageRing(120 * options.statsPerSecond);
+        var byteSumRing = new AverageRing(120 * options.statsPerSecond);
+        var cacheHitRing = new AverageRing(120 * options.statsPerSecond);
+        var responseTimeRing = new AverageRing(120 * options.statsPerSecond);
         return function() {
             var maxLines = 10;
             var convertToHumanReadable = function(bytes) {
@@ -152,7 +152,7 @@ function startupComponents(options) {
             status += "parasoup asset cache: " + options.stats.parasoupAssetCache + "\n";
             status += "memory cache hits: " + options.stats.cacheHits + " " + chps + "/s " + cacheHitRatio + "%\n";
             status += "soup server errors: " + options.stats.soupErrors + "\n";
-            status += "averageResponseTime: " + art + "ms";
+            status += "average response time: " + art + "ms";
 
             return status;
         };

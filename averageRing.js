@@ -1,13 +1,14 @@
-var AverageDiffRing = function(size) {
+var AverageRing = function(size, calculateDiff) {
     this.size = parseInt(size);
     this.nextPosition = 0;
     this.used = 0;
     this.full = false;
     this.ring = new Array(this.size);
     this.lastValue = 0;
+    this.calcDiff = calculateDiff === undefined ? true : true;
 };
 
-AverageDiffRing.prototype.add = function(value) {
+AverageRing.prototype.add = function(value) {
     if (!this.full) {
         if (++this.used === this.size) {
             this.full = true;
@@ -15,24 +16,53 @@ AverageDiffRing.prototype.add = function(value) {
     }
 
     this.ring[this.nextPosition] = {
-        value: value - this.lastValue,
+        value: this.calcDiff ? value - this.lastValue : value,
         time: new Date()
     };
 
-    this.lastValue = value;
+    if (this.calcDiff) {
+        this.lastValue = value;
+    }
+
     this.positionStep();
 }
 
-AverageDiffRing.prototype.positionStep = function() {
+
+AverageRing.prototype.positionStep = function() {
     this.nextPosition = (++this.nextPosition) % (this.size);
 }
 
-AverageDiffRing.prototype.getAveragePerTime = function(precision, projectionTimeMs) {
+AverageRing.prototype.getAverage = function(precision) {
+    var avg = 0;
+    var l = this.used;
+
+    if (l === 0) {
+        return 0;
+    }
+
+    precision = Math.pow(10, precision);
+    for (var i = 0; i < l; i++) {
+        var item = this.ring[i];
+        avg += item.value;
+    }
+
+    avg = avg / l;
+
+    return Math.floor(avg * precision) / precision;
+}
+
+AverageRing.prototype.getAveragePerTime = function(precision, projectionTimeMs) {
     var avg = 0;
     var l = this.used;
     var minTime = new Date().getTime();
     var maxTime = 0;
+
+    if (l === 0) {
+        return 0;
+    }
+
     precision = Math.pow(10, precision);
+
     for (var i = 0; i < l; i++) {
         var item = this.ring[i];
         avg += item.value;
@@ -45,4 +75,4 @@ AverageDiffRing.prototype.getAveragePerTime = function(precision, projectionTime
     return Math.floor((avg / timeDiff) * projectionTimeMs * precision) / precision;
 }
 
-module.exports = AverageDiffRing;
+module.exports = AverageRing;

@@ -1,5 +1,6 @@
 var url = require('url'),
     http = require('http'),
+    AverageRing = require('./averageRing.js'),
     assetDownload = require('./assetDownload.js'),
     mime = require('./mimeTypeHelper.js');
 
@@ -9,9 +10,7 @@ var mod = function(options) {
     var activeDownloads = {};
     var callbacks = {};
     var downloadCount = 0;
-    var responseTimes = [];
-    var responseCount = 0;
-    var responseBackLog = 100;
+    var downloadTimeRing = new AverageRing(500, false);
 
     that.download = function(host, url, callback) {
         cacheHandler.getFileBufferAndType(url, function(err, buffer, mimeType) {
@@ -31,9 +30,7 @@ var mod = function(options) {
             activeDownloads[url] = new assetDownload(
                     host, url, options,
                     function() {
-                        var end = new Date();
-                        responseTimes[responseCount % responseBackLog] = end - start;
-                        responseCount++;
+                        downloadTimeRing.add(new Date() - start);
                         onDownloadComplete.apply({}, arguments);
                     }
                 );
@@ -87,15 +84,7 @@ var mod = function(options) {
         status += "assets served: " + servedCount + "\n";
         status += "downloaded: " + downloadCount + "\n";
         status += "cache efficiency: " + Math.round((servedCount / downloadCount) * 1000) / 1000 + "\n";
-        if (responseCount > 0) {
-            var averageResponseTime = 0;
-            var responseDataSize = responseCount < responseBackLog ? responseCount : responseBackLog;
-            for (var i = 0; i < responseDataSize; i++) {
-                averageResponseTime += responseTimes[i];
-            }
-            averageResponseTime /= responseDataSize;
-            status += "average soup asset download time: " + Math.floor(averageResponseTime * 1000) / 1000 + "ms";
-        }
+        status += "average soup download time: " + downloadTimeRing.getAverage(2) + "ms\n";
         if (Object.keys(activeDownloads).length > 0) {
             status += "\n";
             status += "active downloads:" + "\n";
