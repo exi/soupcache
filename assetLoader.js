@@ -58,7 +58,8 @@ var mod = function(options) {
                     mimeType.search(/application/) != -1 ||
                     mimeType.search(/text/) != -1 ||
                     httpStatusCode < 200 ||
-                    httpStatusCode >= 300) {
+                    httpStatusCode >= 300 ||
+                    buffer.length === 0) {
                 options.stats.soupErrors++;
             } else {
                 process.nextTick(function() {
