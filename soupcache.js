@@ -13,6 +13,7 @@ var url = require('url'),
     loginRequest = require('./loginRequest.js'),
     statusRequest = require('./statusRequest.js'),
     parasoupRequest = require('./parasoupRequest.js'),
+    maintenanceRequest = require('./maintenanceRequest.js'),
     assetLoader = require('./assetLoader.js'),
     statPrinter = require('./statPrinter.js'),
     events = new require('events'),
@@ -28,6 +29,8 @@ var url = require('url'),
         accesslog: "access.log",
         errorlog: "error.log",
         infolog: "info.log",
+        maintenanceTriggerFile: "maintenance.lock",
+        maintenanceMessageFile: "maintenance.html",
         statsPerSecond: 4
     };
 
@@ -72,19 +75,25 @@ function startupComponents(options) {
             nonAssetRequestHandler = new nonAssetRequest(options),
             loginRequestHandler = new loginRequest(options),
             statusRequestHandler = new statusRequest(options);
+            maintenanceRequestHandler = new maintenanceRequest(options);
 
         if (!options.stats.dataCount[request.connection.remoteAddress]) {
             options.stats.dataCount[request.connection.remoteAddress] = 0;
         }
 
-        if (request.headers.host && request.headers.host.match(statusRegex)) {
-            new statusRequestHandler(request, response);
-        } else if (request.headers.host && request.headers.host.match(parasoupRegex)) {
-            new parasoupRequestHandler(request, response);
-        } else if (request.headers.host && request.headers.host.match(assetRegex) && request.url.indexOf("?") === -1) {
-            new assetRequestHandler(request, response);
+        var maint = fs.existsSync(options.maintenanceTriggerFile);
+        if (maint) {
+            new maintenanceRequestHandler(request, response);
         } else {
-            new nonAssetRequestHandler(request, response);
+            if (request.headers.host && request.headers.host.match(statusRegex)) {
+                new statusRequestHandler(request, response);
+            } else if (request.headers.host && request.headers.host.match(parasoupRegex)) {
+                new parasoupRequestHandler(request, response);
+            } else if (request.headers.host && request.headers.host.match(assetRegex) && request.url.indexOf("?") === -1) {
+                new assetRequestHandler(request, response);
+            } else {
+                new nonAssetRequestHandler(request, response);
+            }
         }
     };
 
