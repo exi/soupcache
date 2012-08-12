@@ -149,7 +149,7 @@ module.exports = function(options, initcb) {
                         } else {
                             var diff = Math.floor(( new Date() ) - start);
                             if (diff > 500) {
-                                options.logger.error("query for " + filename + " took " + diff + "ms");
+                                options.logger.info("query for " + filename + " took " + diff + "ms");
                             }
                             var buf = new Buffer(data);
                             cb(null, buf, type);
