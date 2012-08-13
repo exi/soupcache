@@ -165,7 +165,10 @@ var assetDownload = function(mirror, url, options, callback) {
     var finish = function() {
         clearAbortTimer();
         if (fileBuffer === null && (statusCode < 200 || statusCode >= 300)) {
-            options.logger.error("file Buffer empty");
+            options.logger.error("file Buffer empty" + originalUrl);
+            retry();
+        } else if (fileWritten !== fileSize) {
+            options.logger.error("incomplete data " + originalUrl);
             retry();
         } else {
             try {
