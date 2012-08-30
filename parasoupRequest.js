@@ -5,6 +5,7 @@ var mod = function(options) {
     var clients = [],
         cache = null,
         cacheSize = null,
+        cacheHandler = options.cacheHandler,
         getHtmlContent = function() {
             return fs.readFileSync("./parasoup.html", 'utf-8');
         },
@@ -35,6 +36,7 @@ var mod = function(options) {
 
     var deliverToClients = function(url) {
         var response = "http://a.asset." + options.domain + url;
+        cacheHandler.prefetchFile(url);
         for (var i = 0; i < clients.length; i++) {
             try {
                 clients[i].response.writeHead(
@@ -47,11 +49,11 @@ var mod = function(options) {
                 clients[i].response.end(response);
                 served++;
                 options.logger.access(clients[i].request, 200, response.length);
-                updateStats();
             } catch (e) {
                 //dont care
             }
         }
+        updateStats();
         clients = [];
     };
 
@@ -132,6 +134,13 @@ var mod = function(options) {
             response.writeHead(200, {
                 'Content-Length': html.length,
                 'Content-Type': 'text/html'
+            });
+            response.end(html);
+        } else if (request.url == "/robots.txt") {
+            var robots = "";
+            response.writeHead(200, {
+                'Content-Length': robots.length,
+                'Content-Type': 'text/plain'
             });
             response.end(html);
         } else {

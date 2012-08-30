@@ -46,7 +46,7 @@ var getTypeAndClose = function(fileinfo, cb) {
             }
         });
     } catch (e) {
-        closeAndReturnError(fileinfo, e, cb);
+        closeDeleteAndReturnError(fileinfo, e, cb);
     }
 };
 

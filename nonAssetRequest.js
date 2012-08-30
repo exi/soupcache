@@ -301,8 +301,11 @@ var mod = function(options) {
             that.onSoupError = function(error) {
                 if (that.tries < maxTries) {
                     that.tries++;
-                    options.logger.error("soupError, code: " + error.code + ", tries: " + that.tries + "/" + maxTries +
-                        ", " + that.request.headers.host + that.request.url, error);
+                    try {
+                        options.logger.error("soupError, code: " + error.code + ", tries: " + that.tries + "/" +
+                                maxTries + ", " + that.request.headers.host + that.request.url, error);
+                    } catch (e) {
+                    }
                     setTimeout(that.respondeWithOriginalPage, 500);
                 } else {
                     options.logger.error("aborting non asset request after " + that.tries + " tries", error);

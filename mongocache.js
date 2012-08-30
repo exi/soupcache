@@ -128,12 +128,12 @@ module.exports = function(options, initcb) {
         );
     };
 
-    var readFileAndTypeFromDb = function(filename, cb) {
+    var readFileAndTypeFromDb = function(filename, cb, prefetch) {
         var data = getFromCache(filename);
         if (data !== undefined) {
-            options.stats.cacheHits++;
+            prefetch || options.stats.cacheHits++;
             cb(null, data.data, data.contentType);
-            return increaseAccessCount(filename);
+            return prefetch || increaseAccessCount(filename);
         }
         var start = new Date();
         return openDbFileRead(filename, function(gs) {
@@ -148,14 +148,14 @@ module.exports = function(options, initcb) {
                             cb(err);
                         } else {
                             var diff = Math.floor(( new Date() ) - start);
-                            if (diff > 500) {
+                            if (!prefetch && diff > 500) {
                                 options.logger.info("query for " + filename + " took " + diff + "ms");
                             }
                             var buf = new Buffer(data);
                             cb(null, buf, type);
                             gs.close(function() {
                                 addToCache(filename, buf, type);
-                                increaseAccessCount(filename);
+                                prefetch || increaseAccessCount(filename);
                             });
                         }
                     });
@@ -200,6 +200,7 @@ module.exports = function(options, initcb) {
             updateStats();
             var api = {
                 insertFileBuffer: function(filename, buffer, mimeType, cb) {
+                    cb = cb || function() {};
                     var cacheName = sanitizeFileName(filename);
                     insertBufferIntoDb(
                         buffer,
@@ -212,6 +213,7 @@ module.exports = function(options, initcb) {
                     updateStats();
                 },
                 getFileMimeType: function(filename, cb) {
+                    cb = cb || function() {};
                     var cacheName = sanitizeFileName(filename);
                     fileExistsInDb(cacheName, function(err, exists) {
                         if (err) {
@@ -219,13 +221,12 @@ module.exports = function(options, initcb) {
                         } else if (!exists) {
                             cb(new Error("file not found"));
                         } else {
-                            getMimeTypeFromDb(cacheName, function(err, type) {
-                                cb(err, type);
-                            });
+                            getMimeTypeFromDb(cacheName, cb);
                         }
                     });
                 },
                 getFileBufferAndType: function(filename, cb) {
+                    cb = cb || function() {};
                     var cacheName = sanitizeFileName(filename);
                     fileExistsInDb(cacheName, function(err, exists) {
                         if (err) {
@@ -234,6 +235,19 @@ module.exports = function(options, initcb) {
                             cb(new Error("file not found"));
                         } else {
                             readFileAndTypeFromDb(cacheName, cb);
+                        }
+                    });
+                },
+                prefetchFile: function(filename, cb) {
+                    cb = cb || function() {};
+                    var cacheName = sanitizeFileName(filename);
+                    fileExistsInDb(cacheName, function(err, exists) {
+                        if (err) {
+                            cb(err);
+                        } else if (!exists) {
+                            cb(new Error("file not found"));
+                        } else {
+                            readFileAndTypeFromDb(cacheName, cb, true);
                         }
                     });
                 }
