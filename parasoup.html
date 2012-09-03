@@ -268,26 +268,34 @@
         printStatus();
         var hideTimer = null;
         var showing = false;
-        $("#toggler").mouseenter(function() {
-            clearTimeout(hideTimer);
+        var clearTimer = function() {
+            clearTimeout(hidetimer);
+            hideTimer = null;
+        };
+        $("#toggler").mouseenter(function(event) {
+            clearTimer();
             if (!showing) {
                 showing = true;
                 $("#effect").removeClass("closed", 500, function() {
                     showing = false;
                 });
             }
+            event.stopPropagation();
         });
-        $("#effect").mouseover(function() {
-            clearTimeout(hideTimer);
+        $("#effect").mouseover(function(event) {
+            clearTimer();
+            event.stopPropagation();
         });
         var setHideTimer = function() {
-            clearTimeout(hideTimer);
+            clearTimer();
             hideTimer = setTimeout(function() {
                 $("#effect").addClass("closed", 500);
             }, 1000);
         };
-        $("#effect").mouseout(function() {
-            setHideTimer();
+        $("body").mouseover(function() {
+            if (hideTimer === null) {
+                setHideTimer();
+            }
         });
         setHideTimer();
     });

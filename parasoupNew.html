@@ -3,33 +3,42 @@
     <title>Infinite pictures scolling by</title>
     <meta name="description" content="Infinite pictures scrolling by">
     <meta name="keywords" content="soup.io, parasoup, funny pictures, scrolling">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css">
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
     <style type="text/css">
-        #slider { width: 250px; float: left; margin-right: 10px;}
-        #toggler { width: 100%; height: 5px; z-index: 10; background-color: grey; }
-        #effect { padding: 0.4em; position: relative; height: 100px; width: 100%; position: absolute; top: 0px; left: 0px; }
-        #effect h3 { margin: 0; padding: 0.4em; text-align: center; }
+        #slider { width: 250px; margin-right: 10px;}
+        #toggler { width: 100%; z-index: 10; background-color: grey; }
+        #indicator { width: 100%; height: 2px; background-color: blue;}
+        #indicator2 { width: 100%; height: 2px; background-color: grey;}
+        .paused { background-color: red !important; }
+        #effect { height: 120px; width: 100%; overflow: hidden; position: absolute; background-color: white; border-bottom: 2px solid grey; }
+        #effect.closed { height: 0px; }
+        #effect h3 { margin: 0; padding: 5px; text-align: center; }
     </style>
 </head>
 <body style="margin: 0;">
 <div id="toggler">
-<div id="effect" class="ui-widget-content ui-corner-all">
+<div id="indicator"> </div>
+<div id="indicator2"> </div>
+<div id="effect">
     <h3 class="ui-widget-header ui-corner-all">Parasoup</h3>
     <p>
     <div id="slider"></div>
-    picture delay: <span id="delay"></span>, pause with any key,click image for search, <a href="http://www.parasoup.de">click here for soup</a>, <u><span id="paused">unpaused</span></u>.
-    here for: <span id="time"></span>, watched <span id="items"></span> pictures
+    picture delay: <span id="delay"></span>. Pause with any key. Click image for search, <a href="http://www.parasoup.de">click here for soup</a>. <u><span id="paused">unpaused</span></u>.
+    here for: <span id="time"></span>, watched <span id="items"></span> pictures. You can trigger "next Image" with j, l, left/down arrow, even in paused mode.
     </p>
+    <p>All images taken from <a href="http://www.soup.io">soup.io</a> and cached for faster access.</p>
 </div>
 </div>
+<a href="https://github.com/exi/soupcache"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" alt="Fork me on GitHub"></a>
 <div id="container"></div>
 <script type="text/javascript">
     var Cache = function() {
         this.name = "default";
         this.constructor = function(cacheSize) {
-            this._cacheSize = cacheSize || 10;
+            this._cacheSize = cacheSize || 20;
             this._store = [];
             this._requestInProgress = false;
             this.update();
@@ -47,12 +56,14 @@
         }
     };
     Cache.prototype._fetchDone = function() {
-        console.log(this.name + " store status: " + this.length() + "/" + this._cacheSize);
         this._requestInProgress = false;
         this.update();
     };
     Cache.prototype.add = function(item) {
         this._store.push(item);
+    }
+    Cache.prototype.fillStatus = function() {
+        return this.length() / this._cacheSize;
     }
     Cache.prototype.fetch = function() {};
     Cache.prototype.get = function() {
@@ -112,6 +123,7 @@
                             prepend(this);
                         that.add(a);
                         that._fetchDone();
+                        that.updateIndicator();
                     }).
                     error(function() {
                         $(this).remove();
@@ -120,7 +132,14 @@
             } else {
                 retry();
             }
-        }
+        };
+        this.update = function() {
+            this.updateIndicator();
+            Cache.prototype.update.call(this);
+        };
+        this.updateIndicator = function() {
+            $("#indicator").css("width", this.fillStatus() * 100 + "%");
+        };
     }
 
     ImgCache.prototype = new Cache();
@@ -142,7 +161,7 @@
     var getImgFromA = function(a) { return $(a).children(":first"); };
 
     var showImage = function(img) {
-        img.slideDown(1000, function() {
+        img.slideDown(500, function() {
             items++;
             if (!paused) continueLoop();
         });
@@ -171,9 +190,8 @@
         }
     }
 
-    var invalidKeys = [18/*tab*/, 32, 33, 34, 35, 36, 38, 144];
+    var invalidKeys = [17/*ctrl*/, 18/*tab*/, 91/*win*/, 32, 33, 34, 35, 36, 38, 144];
     var nextKeys = [39/*right*/, 40/*down*/, 74/*j*/, 76/*l*/];
-    //f1...f12
     for (var i = 112; i <= 123; i++) {
         invalidKeys.push(i);
     }
@@ -181,22 +199,23 @@
     var keyEvents = function() {
         var keyHandler = function(evt) {
             var key = evt.which || evt.keyCode;
-            console.log(nextKeys.indexOf(key) + " " + key);
             if (invalidKeys.indexOf(key) === -1) {
+                console.log(key);
                 if (nextKeys.indexOf(key) !== -1) {
-                    console.log("nextimage");
                     showNextImage();
                 } else if (paused) {
                     paused = false;
                     loop();
                     $('#paused').text("unpaused");
+                    $('#indicator2').removeClass("paused", 250);
                 } else {
                     paused = true;
                     if (timer) clearTimeout(timer);
                     timer = null;
                     $('#paused').text("paused");
+                    $('#indicator2').addClass("paused", 250);
                 }
-            } else console.log("ignore key: " + key);
+            }
         }
         $(document).keydown(keyHandler);
     }
@@ -249,25 +268,36 @@
         printStatus();
         var hideTimer = null;
         var showing = false;
-        $("#toggler").mouseenter(function() {
-            clearTimeout(hideTimer);
+        var clearTimer = function() {
+            clearTimeout(hidetimer);
+            hideTimer = null;
+        };
+        $("#toggler").mouseenter(function(event) {
+            clearTimer();
             if (!showing) {
                 showing = true;
-                $("#effect").show("blind", 500, function() {
+                $("#effect").removeClass("closed", 500, function() {
                     showing = false;
                 });
             }
+            event.stopPropagation();
         });
-        $("#effect").mouseover(function() {
-            clearTimeout(hideTimer);
+        $("#effect").mouseover(function(event) {
+            clearTimer();
+            event.stopPropagation();
         });
-        $("#effect").mouseout(function() {
-            clearTimeout(hideTimer);
+        var setHideTimer = function() {
+            clearTimer();
             hideTimer = setTimeout(function() {
-                $("#effect").hide("blind", 500);
+                $("#effect").addClass("closed", 500);
             }, 1000);
+        };
+        $("body").mouseover(function() {
+            if (hideTimer === null) {
+                setHideTimer();
+            }
         });
-        $("#effect").hide();
+        setHideTimer();
     });
 </script>
 </body>
