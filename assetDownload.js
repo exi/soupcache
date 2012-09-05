@@ -17,8 +17,8 @@ var assetDownload = function(mirror, url, options, callback) {
     var statusCode = 200;
     var originalUrl = url;
     var redirects = 0;
-    var maxRedirects = 10;
-    var maxDownloadTime = 1000 * 60 * 15; // 15 minutes
+    var maxRedirects = 15;
+    var maxDownloadTime = 1000 * 60 * 60 * 24; // 24 hours
     var abortTimer = null;
     var abortTimerTime = null;
 
@@ -128,11 +128,20 @@ var assetDownload = function(mirror, url, options, callback) {
     };
 
     var retry = function() {
+        function baseDistribution(x) {
+            return Math.sin(x / 2) * (1 - x);
+        }
+        function distributionDistortion(x) {
+            return (1/(1+Math.exp(-(x*2-1)*2)));
+        }
         tries++;
         var now = new Date();
         var x = now.getTime() - startDate.getTime();
         var xdm = x / maxDownloadTime;
-        var waitTime = Math.max(Math.floor(Math.sin(xdm / 2) * (maxDownloadTime - x)), 1000);
+        var waitTime = Math.max(
+            Math.floor(baseDistribution(xdm) * distributionDistortion(xdm) * (maxDownloadTime - x)),
+            1000
+        );
         options.logger.error("asset retry(" + tries + ") '" + url +"' next in " + waitTime + "ms");
         if (x + waitTime < maxDownloadTime) {
             setTimeout(fetchFileAndFinish, waitTime);

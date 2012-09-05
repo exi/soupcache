@@ -88,7 +88,7 @@ var mod = function(options) {
         status += "average soup download time: " + downloadTimeRing.getAverage(2) + "ms\n";
         if (Object.keys(activeDownloads).length > 0) {
             status += "\n";
-            status += "active downloads:" + "\n";
+            status += "active downloads (" + Object.keys(activeDownloads).length + "):" + "\n";
             var processed = 0;
             for (var i in activeDownloads) {
                 var lineend = Object.keys(activeDownloads).length - 1 == processed ? "" : "\n";
