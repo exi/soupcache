@@ -118,7 +118,7 @@
                     load(function() {
                         $(this).hide().css('float', 'left');
                         var a = $("<a />").
-                            attr("href", "http://images.google.com/searchbyimage?image_url=" + url).
+                            attr("href", "http://images.google.com/searchbyimage?image_url=" + url.replace(/parasoup\.de/g, "soup.io")).
                             attr("target", "_blank").
                             prepend(this);
                         that.add(a);
@@ -269,7 +269,7 @@
         var hideTimer = null;
         var showing = false;
         var clearTimer = function() {
-            clearTimeout(hidetimer);
+            clearTimeout(hideTimer);
             hideTimer = null;
         };
         $("#toggler").mouseenter(function(event) {

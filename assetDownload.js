@@ -18,9 +18,10 @@ var assetDownload = function(mirror, url, options, callback) {
     var originalUrl = url;
     var redirects = 0;
     var maxRedirects = 15;
-    var maxDownloadTime = 1000 * 60 * 60 * 24; // 24 hours
+    var maxDownloadTime = 1000 * 60 * 30;
     var abortTimer = null;
     var abortTimerTime = null;
+    var status = "";
 
     var resetValues = function() {
         fileSize = 0;
@@ -31,6 +32,7 @@ var assetDownload = function(mirror, url, options, callback) {
     };
 
     var fetchFileAndFinish = function() {
+        status = "requesting data";
         resetValues();
         var mirror = getMirror();
         currentMirror = mirror;
@@ -38,7 +40,8 @@ var assetDownload = function(mirror, url, options, callback) {
         soupRequest = http.get({
                 host: mirror,
                 port: 80,
-                path: url
+                path: url,
+                agent: false
             },
             onFetchResponse);
         soupRequest.on('error', onError);
@@ -107,6 +110,7 @@ var assetDownload = function(mirror, url, options, callback) {
             soupRequest.abort();
             retry();
         } else {
+            status = "wayting for data";
             res.setEncoding('binary');
             var contentLength = parseInt(res.headers['content-length']);
             fileSize = contentLength;
@@ -144,6 +148,7 @@ var assetDownload = function(mirror, url, options, callback) {
         );
         options.logger.error("asset retry(" + tries + ") '" + url +"' next in " + waitTime + "ms");
         if (x + waitTime < maxDownloadTime) {
+            status = "waiting for retry at " + new Date(new Date().getTime() + waitTime);
             setTimeout(fetchFileAndFinish, waitTime);
         } else {
             errorFinish(500);
@@ -212,8 +217,9 @@ var assetDownload = function(mirror, url, options, callback) {
         var waitingTime = ((new Date()).getTime() - startDate.getTime()) / 1000;
         waitingTime = Math.floor(waitingTime / 10) * 10;
         var mirrorsString = "[" + mirrors.join(",") + "]";
-        return "http://" + currentMirror + url + " \t" + (tries + 1) + " tries \t" +
-            waitingTime + "/" + (maxDownloadTime / 1000) + "s \t" + fileWritten + "/" + fileSize + " \t mirrors:" + mirrorsString + "\t" + that.getStatusBar();
+        return "" + (tries + 1) + " tries " +
+            waitingTime + "/" + (maxDownloadTime / 1000) + "s " + fileWritten + "/" + fileSize + " " +
+            "mirrors:" + mirrorsString + " \"" + status + "\" " + "http://" + currentMirror + url + " " + that.getStatusBar();
     };
 
     that.getStatusBar = function() {

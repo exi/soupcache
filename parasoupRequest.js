@@ -7,13 +7,14 @@ var mod = function(options) {
         cacheSize = null,
         cacheHandler = options.cacheHandler,
         getHtmlContent = function() {
-            return fs.readFileSync("./parasoup.html", 'utf-8');
+            return fs.readFileSync('./parasoup.html', 'utf-8');
         },
         getNewHtmlContent = function() {
-            return fs.readFileSync("./parasoupNew.html", 'utf-8');
+            return fs.readFileSync('./parasoupNew.html', 'utf-8');
         },
         served = 0,
         cacheLoaded = false,
+        madcounter = 0,
         stallTimer = null;
 
     options.eventBus.on('newAsset', function(url, buffer, contentType) {
@@ -35,7 +36,8 @@ var mod = function(options) {
     });
 
     var deliverToClients = function(url) {
-        var response = "http://a.asset." + options.domain + url;
+        var response = 'http://a.asset.' + options.domain + url;
+        var addresses = [];
         cacheHandler.prefetchFile(url);
         for (var i = 0; i < clients.length; i++) {
             try {
@@ -43,16 +45,19 @@ var mod = function(options) {
                     200,
                     {
                         'Content-Length': response.length,
-                        'Content-Type': 'text/plain'
+                        'Content-Type': 'text/plain',
+                        'Cache-Control': 'no-cache'
                     }
                 );
                 clients[i].response.end(response);
+                addresses.push(clients[i].request.connection.remoteAddress);
                 served++;
                 options.logger.access(clients[i].request, 200, response.length);
             } catch (e) {
-                //dont care
+                options.logger.error('parasoupRequest', e);
             }
         }
+        options.logger.info(url + ' to ' + addresses.join(', '));
         updateStats();
         clients = [];
     };
@@ -124,25 +129,25 @@ var mod = function(options) {
     });
 
     return function(request, response) {
-        if (request.url == "/newStuff?") {
+        if (request.url == '/newStuff?') {
             clients.push({
                 request: request,
                 response: response
             });
-        } else if (request.url == "/newHTML") {
+        } else if (request.url == '/newHTML') {
             var html = getNewHtmlContent();
             response.writeHead(200, {
                 'Content-Length': html.length,
                 'Content-Type': 'text/html'
             });
             response.end(html);
-        } else if (request.url == "/robots.txt") {
-            var robots = "";
+        } else if (request.url == '/robots.txt') {
+            var robots = 'User-agent: *\nDisallow:\n';
             response.writeHead(200, {
                 'Content-Length': robots.length,
                 'Content-Type': 'text/plain'
             });
-            response.end(html);
+            response.end(robots);
         } else {
             var html = getHtmlContent();
             response.writeHead(200, {

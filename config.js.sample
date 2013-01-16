@@ -1,0 +1,22 @@
+{
+    "domainPrefix": "parasoup.de",
+    "ip": "1.1.1.1",
+    "port": 80,
+    "timeout": 30000,
+    "mongodb": {
+        "host": "127.0.0.1",
+        "port": 27018
+    },
+    "accesslog": "access.log",
+    "errorlog": "error.log",
+    "infolog": "info.log",
+    "maintenanceTriggerFile": "maintenance.lock",
+    "maintenanceMessageFile": "maintenance.html",
+    "statsPerSecond": 4,
+    "auth": {
+        "users": {
+            "parasoup": "88a5ab39ba2d0fad624f280479d41858"
+        }
+    },
+    "uid": "username"
+}

@@ -1,4 +1,5 @@
 var url = require('url'),
+    AuthCheck = require('./authCheck.js'),
     http = require('http'),
     fs = require('fs'),
     async = require('async'),
@@ -17,29 +18,14 @@ var url = require('url'),
     assetLoader = require('./assetLoader.js'),
     statPrinter = require('./statPrinter.js'),
     events = new require('events'),
-    options = {
-        domainPrefix: "parasoup.de",
-        ip: "188.40.102.160",
-        port: 80,
-        timeout: 30000, //30s
-        mongodb: {
-            host: '127.0.0.1',
-            port: 27018
-        },
-        accesslog: "access.log",
-        errorlog: "error.log",
-        infolog: "info.log",
-        maintenanceTriggerFile: "maintenance.lock",
-        maintenanceMessageFile: "maintenance.html",
-        statsPerSecond: 4
-    };
+    options = JSON.parse(fs.readFileSync('./config.json'));
 
 function requestDispatcher(request, response) {
     if (onRequest) {
         onRequest(request, response);
     } else {
         response.writeHead(503);
-        response.end("Parasoup starting up");
+        response.end('Parasoup starting up');
     }
 }
 
@@ -59,18 +45,21 @@ function startupComponents(options) {
     };
     options.eventBus = new events.EventEmitter();
 
-    // we need this because the browsers will expect port numbers
-    //options.domain = options.domainPrefix + ":" + options.port;
     options.domain = options.domainPrefix;
 
     var parasoupRequestHandler = new parasoupRequest(options);
+    var authCheck = new AuthCheck(options);
 
     onRequest = function(request, response) {
         options.stats.requests++;
 
-        var assetRegex = new RegExp(".*\\.asset\\." + options.domain),
-            statusRegex = new RegExp("status\\." + options.domain),
-            parasoupRegex = new RegExp("^" + options.domain + "$"),
+        if (!authCheck.checkAuth(request, response)) {
+            return;
+        }
+
+        var assetRegex = new RegExp('.*\\.asset\\.' + options.domain),
+            statusRegex = new RegExp('status\\.' + options.domain),
+            parasoupRegex = new RegExp('^' + options.domain + '$'),
             assetRequestHandler = new assetRequest(options),
             nonAssetRequestHandler = new nonAssetRequest(options),
             loginRequestHandler = new loginRequest(options),
@@ -89,7 +78,7 @@ function startupComponents(options) {
                 new statusRequestHandler(request, response);
             } else if (request.headers.host && request.headers.host.match(parasoupRegex)) {
                 new parasoupRequestHandler(request, response);
-            } else if (request.headers.host && request.headers.host.match(assetRegex) && request.url.indexOf("?") === -1) {
+            } else if (request.headers.host && request.headers.host.match(assetRegex) && request.url.indexOf('?') === -1) {
                 new assetRequestHandler(request, response);
             } else {
                 new nonAssetRequestHandler(request, response);
@@ -122,7 +111,7 @@ function startupComponents(options) {
             var maxLines = 10;
             var convertToHumanReadable = function(bytes) {
                 var factors = [[1, 'B'], [1024, 'KB'], [1048576, 'MB'], [1073741824, 'GB']];
-                var ret = "";
+                var ret = '';
                 for (var i = 0; i < factors.length; i++) {
                     if (i + 1 >= factors.length || (bytes > factors[i][0] && bytes < factors[i + 1][0]) || bytes === 0) {
                         ret = Math.floor((bytes / (factors[i][0])) * 100 ) / 100 + factors[i][1];
@@ -136,7 +125,7 @@ function startupComponents(options) {
 
             var dataArray = options.stats.dataCount;
             for (var i in options.stats.dataCount) {
-                if (!(i === "" || typeof i == "undefined" || isNaN(dataArray[i]))) {
+                if (!(i === '' || typeof i == 'undefined' || isNaN(dataArray[i]))) {
                     sumBytes += dataArray[i];
                 }
             }
@@ -153,27 +142,31 @@ function startupComponents(options) {
             var chr = (100 / options.stats.assetsServed) * options.stats.cacheHits;
             var cacheHitRatio = Math.floor(chr * 100) / 100 ;
 
-            var status = "";
+            var status = '';
 
-            status += "total data served: " + convertToHumanReadable(sumBytes) + " " + convertToHumanReadable(bps) + "/s\n";
-            status += "assets on server: " + options.stats.assetCount + "\n";
-            status += "parasoups served: " + served + " " + sps + "/s\n";
-            status += "parasoup asset cache: " + options.stats.parasoupAssetCache + "\n";
-            status += "memory cache hits: " + options.stats.cacheHits + " " + chps + "/s " + cacheHitRatio + "%\n";
-            status += "soup server errors: " + options.stats.soupErrors + "\n";
-            status += "average response time: " + art + "ms";
+            status += 'total data served: ' + convertToHumanReadable(sumBytes) + ' ' + convertToHumanReadable(bps) + '/s\n';
+            status += 'assets on server: ' + options.stats.assetCount + '\n';
+            status += 'parasoups served: ' + served + ' ' + sps + '/s\n';
+            status += 'parasoup asset cache: ' + options.stats.parasoupAssetCache + '\n';
+            status += 'memory cache hits: ' + options.stats.cacheHits + ' ' + chps + '/s ' + cacheHitRatio + '%\n';
+            status += 'soup server errors: ' + options.stats.soupErrors + '\n';
+            status += 'average response time: ' + art + 'ms';
 
             return status;
         };
     } ());
 
+    statusProvider.push(function() {
+        return 'active logins: ' + authCheck.getActiveLoginCount();
+    });
+
     statusProvider.push(options.assetLoader.getStatus);
 
     statusProvider.push(function() {
-        if (fs.existsSync("./externalMessage")) {
+        if (fs.existsSync('./externalMessage')) {
             return fs.readFileSync('./externalMessage');
         } else {
-            return "";
+            return '';
         }
     });
 
@@ -182,7 +175,7 @@ function startupComponents(options) {
 };
 
 server = http.createServer(requestDispatcher).listen(options.port, options.ip, function() {
-    process.setuid('exi');
+    process.setuid(options.uid);
 
     async.series({
         logger: function(cb) {
@@ -197,7 +190,7 @@ server = http.createServer(requestDispatcher).listen(options.port, options.ip, f
                     return cb(err);
                 } else {
                     console.log('cachehandler ready');
-                    options.logger.console("mongodb connected");
+                    options.logger.console('mongodb connected');
                     options.cacheHandler = cacheHandler;
                     cb(null);
                 }

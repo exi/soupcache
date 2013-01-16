@@ -31,7 +31,7 @@ var mod = function(options) {
                     response.writeHead(httpStatusCode, {
                         'Content-Type': contentType,
                         'Content-Length': buffer.length,
-                        'Cache-Control': 'max-age=2592000' //30 days
+                        'Cache-Control': 'max-age=2592000, public' //30 days
                     });
                     options.stats.dataCount[request.connection.remoteAddress] += buffer.length;
                     response.end(buffer, 'binary');

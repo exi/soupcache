@@ -87,6 +87,7 @@
                 url: "http://" + window.location.hostname + "/newStuff?",
                 success: function(data, textStatus, xhr) {
                     if (xhr.status == 200) {
+                        console.log("cache got: " + data);
                         that.add(data);
                         that._fetchDone();
                     }
@@ -269,7 +270,7 @@
         var hideTimer = null;
         var showing = false;
         var clearTimer = function() {
-            clearTimeout(hidetimer);
+            clearTimeout(hideTimer);
             hideTimer = null;
         };
         $("#toggler").mouseenter(function(event) {
