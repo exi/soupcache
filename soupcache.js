@@ -53,10 +53,6 @@ function startupComponents(options) {
     onRequest = function(request, response) {
         options.stats.requests++;
 
-        if (!authCheck.checkAuth(request, response)) {
-            return;
-        }
-
         var assetRegex = new RegExp('.*\\.asset\\.' + options.domain),
             statusRegex = new RegExp('status\\.' + options.domain),
             parasoupRegex = new RegExp('^' + options.domain + '$'),
@@ -74,14 +70,19 @@ function startupComponents(options) {
         if (maint) {
             new maintenanceRequestHandler(request, response);
         } else {
-            if (request.headers.host && request.headers.host.match(statusRegex)) {
-                new statusRequestHandler(request, response);
-            } else if (request.headers.host && request.headers.host.match(parasoupRegex)) {
-                new parasoupRequestHandler(request, response);
-            } else if (request.headers.host && request.headers.host.match(assetRegex) && request.url.indexOf('?') === -1) {
+            if (request.headers.host && request.headers.host.match(assetRegex) && request.url.indexOf('?') === -1) {
                 new assetRequestHandler(request, response);
             } else {
-                new nonAssetRequestHandler(request, response);
+                if (!authCheck.checkAuth(request, response)) {
+                    return;
+                }
+                if (request.headers.host && request.headers.host.match(statusRegex)) {
+                    new statusRequestHandler(request, response);
+                } else if (request.headers.host && request.headers.host.match(parasoupRegex)) {
+                    new parasoupRequestHandler(request, response);
+                } else {
+                    new nonAssetRequestHandler(request, response);
+                }
             }
         }
     };
