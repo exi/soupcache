@@ -184,16 +184,6 @@ var mod = function(options) {
                 return new Buffer(lines.join("\n"));
             }
 
-            var retry = function(cb) {
-                if (that.tries < maxTries) {
-                    that.tries++;
-                    cb();
-                } else {
-                    options.logger.error("aborting non asset request after " + that.tries + " tries", error);
-                    that.response.end();
-                }
-            }
-
             that.writeResponseHead = function() {
                 that.response.writeHead(that.soupResponse.statusCode,
                         that.getModifiedSoupResponseHeaders(that.soupResponse.headers));
@@ -284,46 +274,43 @@ var mod = function(options) {
 
             that.onSoupResponse = function(res) {
                 that.soupResponse = res;
-                if (res.statusCode >= 500 && res.statusCode < 600) {
-                    retry(function() {
-                        options.logger.error(
-                            "nonAsset got status " + res.statusCode + ", tries: " + that.tries + "/" + maxTries);
-                        setTimeout(that.respondeWithOriginalPage, 500);
-                    });
+
+                switch (res.headers['content-encoding']) {
+                    case 'gzip':
+                        that.contentEncoding = 'gzip';
+                        break;
+                    case 'deflate':
+                        that.contentEncoding = 'deflate';
+                        break;
+                    default:
+                        that.contentEncoding = false;
+                        break;
+                }
+
+                res.setEncoding('binary');
+
+                res.on('data', that.onSoupData);
+
+                if (that.shouldTransformData(res.headers)) {
+                    res.on('end', that.onSoupEndTransform);
                 } else {
-                    switch (res.headers['content-encoding']) {
-                        case 'gzip':
-                            that.contentEncoding = 'gzip';
-                            break;
-                        case 'deflate':
-                            that.contentEncoding = 'deflate';
-                            break;
-                        default:
-                            that.contentEncoding = false;
-                            break;
-                    }
-
-                    res.setEncoding('binary');
-
-                    res.on('data', that.onSoupData);
-
-                    if (that.shouldTransformData(res.headers)) {
-                        res.on('end', that.onSoupEndTransform);
-                    } else {
-                        res.on('end', that.onSoupEnd);
-                    }
+                    res.on('end', that.onSoupEnd);
                 }
             };
 
             that.onSoupError = function(error) {
-                retry(function() {
+                if (that.tries < maxTries) {
+                    that.tries++;
                     try {
                         options.logger.error("soupError, code: " + error.code + ", tries: " + that.tries + "/" +
                                 maxTries + ", " + that.request.headers.host + that.request.url, error);
                     } catch (e) {
                     }
                     setTimeout(that.respondeWithOriginalPage, 500);
-                });
+                } else {
+                    options.logger.error("aborting non asset request after " + that.tries + " tries", error);
+                    that.response.end();
+                }
             };
 
             that.onRequestData = function(chunk) {
