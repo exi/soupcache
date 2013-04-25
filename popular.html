@@ -12,23 +12,45 @@
 <h2>Most Popular in the last 30 days</h2>
 <div id="template" style="display: none; border: 1px solid grey; border-radius: 5px; background-color: #ededed;">
     <p><span class="count"></span> views:</p>
-    <div class="container"></div>
+    <div class="container">loading...</div>
 </div>
 <a href="https://github.com/exi/soupcache"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" alt="Fork me on GitHub"></a>
 <div id="container"></div>
 <script type="text/javascript">
+    var toload = [];
+
+    var loadNext = function() {
+        if (toload.length === 0) {
+            return;
+        }
+        var item = toload.shift();
+        var cont = $('#template').clone();
+        cont.css('display', 'inline-block').css('clear', 'both');
+        cont.find('.count').html(item.count);
+        $('#container').append(cont);
+
+        var img = $('<img />').attr('src', item.url).css('float', 'left');
+        img.load(function() {
+            cont.find('.container').empty().append(img);
+            loadNext();
+        }).error(function() {
+            cont.remove();
+            loadNext();
+        });
+    };
+
     $.ajax({
         url: "http://" + window.location.hostname + "/getPopular?",
         success: function(data, textStatus, xhr) {
             if (xhr.status == 200) {
                 data.forEach(function(item) {
-                    var img = $('<img />').attr('src', item.url).css('float', 'left');
-                    var cont = $('#template').clone();
-                    cont.css('display', 'inline-block').css('clear', 'both');
-                    cont.find('.container').append(img);
-                    cont.find('.count').html(item.count);
-                    $('#container').append(cont);
+                    toload.push(item);
                 });
+                loadNext();
+                loadNext();
+                loadNext();
+                loadNext();
+                loadNext();
             }
         },
         error: function(xhr, ajaxOptions, thrownError) {
