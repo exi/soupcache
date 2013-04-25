@@ -9,8 +9,8 @@ var mod = function(options) {
         getHtmlContent = function() {
             return fs.readFileSync('./parasoup.html', 'utf-8');
         },
-        getNewHtmlContent = function() {
-            return fs.readFileSync('./parasoupNew.html', 'utf-8');
+        getPopularContent = function() {
+            return fs.readFileSync('./popular.html', 'utf-8');
         },
         served = 0,
         cacheLoaded = false,
@@ -98,6 +98,36 @@ var mod = function(options) {
         }
     };
 
+    var sendPopularFiles = function(response) {
+        options.cacheHandler.getPopularFiles(200, function(err, files) {
+            if (err) {
+                options.logger.error('sendPopularFiles', err);
+                response.writeHead(500, {
+                    'Content-Length': 0,
+                    'Content-Type': 'text/html'
+                });
+                return reponse.end();
+            }
+
+            var prefixes = ['a', 'b', 'c', 'd', 'e', 'f'];
+
+            files = files.map(function(item) {
+                var i = Math.round(Math.random() * prefixes.length);
+                return {
+                    count: item.count,
+                    url: 'http://' + prefixes[i] + '.asset.' + options.domainPrefix + item.path
+                };
+            });
+
+            var ret = JSON.stringify(files);
+            response.writeHead(200, {
+                'Content-Length': ret.length,
+                'Content-Type': 'application/json'
+            });
+            response.end(ret);
+        });
+    };
+
     var onStallTimer = function() {
         removeStallTimer();
         deliverDataIfNecessary(function() {
@@ -134,8 +164,10 @@ var mod = function(options) {
                 request: request,
                 response: response
             });
-        } else if (request.url == '/newHTML') {
-            var html = getNewHtmlContent();
+        } else if (request.url == '/getPopular?') {
+            sendPopularFiles(response);
+        } else if (request.url == '/popular') {
+            var html = getPopularContent();
             response.writeHead(200, {
                 'Content-Length': html.length,
                 'Content-Type': 'text/html'

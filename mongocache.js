@@ -1,7 +1,7 @@
 var fs = require('fs'),
     mime = require('mime-magic'),
     crypto = require('crypto'),
-    mongoHelper = require("./mongoHelper.js"),
+    mongoHelper = require('./mongoHelper.js'),
     Server = require('mongodb').Server,
     Collection = require('mongodb').Collection,
     GridStore = require('mongodb').GridStore,
@@ -17,12 +17,12 @@ var fs = require('fs'),
     cachePos = 0,
     cacheFull = false;
 
-var rootCollection = "parasoup";
+var rootCollection = 'parasoup';
 
 module.exports = function(options, initcb) {
     var db, collection;
     if (!options) {
-        initcb(new Error("missing options"));
+        initcb(new Error('missing options'));
         return;
     }
 
@@ -76,7 +76,7 @@ module.exports = function(options, initcb) {
         var gridstore = new GridStore(
             db,
             filename,
-            "r",
+            'r',
             {
                 root: rootCollection
             }
@@ -91,11 +91,11 @@ module.exports = function(options, initcb) {
         var gridstore = new GridStore(
             db,
             filename,
-            "w",
+            'w',
             {
                 root: rootCollection,
-                "content_type": contentType,
-                "chunk_size": 1024 * 1024,
+                'content_type': contentType,
+                'chunk_size': 1024 * 1024,
                 metadata: metadata
             }
         );
@@ -139,17 +139,17 @@ module.exports = function(options, initcb) {
         return openDbFileRead(filename, function(gs) {
             gs.read(function(err, data) {
                 if (err) {
-                    options.logger.error("gridstoreRead " + filename, err);
+                    options.logger.error('gridstoreRead ' + filename, err);
                     cb(err);
                 } else {
                     getTypeFromGridStore(gs, function(err, type) {
                         if (err) {
-                            options.logger.error("gettypeFromGridStore " + filename, err);
+                            options.logger.error('gettypeFromGridStore ' + filename, err);
                             cb(err);
                         } else {
                             var diff = Math.floor(( new Date() ) - start);
                             if (!prefetch && diff > 500) {
-                                options.logger.info("query for " + filename + " took " + diff + "ms");
+                                options.logger.info('query for ' + filename + ' took ' + diff + 'ms');
                             }
                             var buf = new Buffer(data);
                             cb(null, buf, type);
@@ -165,7 +165,7 @@ module.exports = function(options, initcb) {
     };
 
     var increaseAccessCount = function(filename) {
-        collection.update({ "filename": filename }, { $inc: { "metadata.accessCount": 1 }, $set: { "metadata.access": new Date()} });
+        collection.update({ 'filename': filename }, { $inc: { 'metadata.accessCount': 1 }, $set: { 'metadata.access': new Date()} });
     };
 
     var getMimeTypeFromDb = function(filename, cb) {
@@ -180,7 +180,7 @@ module.exports = function(options, initcb) {
 
     var getTypeFromGridStore = function(gs, cb) {
         var contentType = gs && gs.contentType ? gs.contentType : null;
-        cb(!contentType ? new Error("file not found") : null, contentType);
+        cb(!contentType ? new Error('file not found') : null, contentType);
     };
 
     var updateStats = function() {
@@ -188,6 +188,29 @@ module.exports = function(options, initcb) {
             if (!err) {
                 options.stats.assetCount = count;
             }
+        });
+    };
+
+    var getPopularFilenames = function(count, cb) {
+        var targetDate = new Date();
+        targetDate.setDate(-30);
+
+        collection.find({ length: { $gt: 100000 }, uploadDate: { $gt: targetDate }}).
+            sort({ 'metadata.accessCount': -1 }).
+            limit(count).toArray(function(err, data) {
+            if (err) {
+                return cb(err);
+            }
+
+
+            data = data.map(function(file) {
+                return {
+                    path: decodeURIComponent(file.filename),
+                    count: file.metadata.accessCount
+                };
+            });
+
+            cb(null, data);
         });
     };
 
@@ -219,7 +242,7 @@ module.exports = function(options, initcb) {
                         if (err) {
                             cb(err);
                         } else if (!exists) {
-                            cb(new Error("file not found"));
+                            cb(new Error('file not found'));
                         } else {
                             getMimeTypeFromDb(cacheName, cb);
                         }
@@ -232,11 +255,16 @@ module.exports = function(options, initcb) {
                         if (err) {
                             cb(err);
                         } else if (!exists) {
-                            cb(new Error("file not found"));
+                            cb(new Error('file not found'));
                         } else {
                             readFileAndTypeFromDb(cacheName, cb);
                         }
                     });
+                },
+                getPopularFiles: function(count, cb) {
+                    cb = cb || function() {};
+                    count = count || 100;
+                    getPopularFilenames(count, cb);
                 },
                 prefetchFile: function(filename, cb) {
                     cb = cb || function() {};
@@ -245,7 +273,7 @@ module.exports = function(options, initcb) {
                         if (err) {
                             cb(err);
                         } else if (!exists) {
-                            cb(new Error("file not found"));
+                            cb(new Error('file not found'));
                         } else {
                             readFileAndTypeFromDb(cacheName, cb, true);
                         }
