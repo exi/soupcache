@@ -105,7 +105,7 @@ var mod = function(options) {
         }
     };
 
-    var sendPopularFiles = function(since, skip, response) {
+    var sendPopularFiles = function(since, skip, request, response) {
         options.cacheHandler.getPopularFiles(20, since, skip, function(err, files) {
             if (err) {
                 options.logger.error('sendPopularFiles', err);
@@ -113,6 +113,7 @@ var mod = function(options) {
                     'Content-Length': 0,
                     'Content-Type': 'text/html'
                 });
+                options.logger.access(request, 500, 0);
                 return reponse.end();
             }
 
@@ -130,7 +131,10 @@ var mod = function(options) {
                 'Content-Length': ret.length,
                 'Content-Type': 'application/json'
             });
+
             response.end(ret);
+
+            options.logger.access(request, 200, ret.length);
         });
     };
 
@@ -183,7 +187,7 @@ var mod = function(options) {
                 }
             }
 
-            sendPopularFiles(since, skip, response);
+            sendPopularFiles(since, skip, request, response);
         });
     };
 
