@@ -51,7 +51,7 @@
                 stuckClass: 'stuck'
             });
             var loaded = 0;
-            var maxLoading = 2;
+            var maxLoading = 10;
             var currentDate;
             var chunks = [];
             var currentProcess;
@@ -98,6 +98,11 @@
                         settings.loading--;
                         done = true;
                         if (!settings.stop) {
+                            var p = $(cont).offset().top;
+                            var vs = $(window).scrollTop();
+                            if (p + $(cont).outerHeight() < vs) {
+                                $(window).scrollTop(vs + this.height);
+                            }
                             $(cont).find('.container').empty().append(img).css('display', 'inline-block');
                         }
                         loadNext(settings);
@@ -117,7 +122,7 @@
                         setCurrentBlock(cont, true);
                     }
                 }, {
-                    offset: '20px'
+                    offset: '0px'
                 });
             };
 
@@ -192,7 +197,7 @@
                 if (!noscroll) {
                     scrollLock = true;
                     var p = $(node).offset().top;
-                    $(window).scrollTop(p - 20);
+                    $(window).scrollTop(p);
                     setTimeout(function() {
                         scrollLock = false;
                     }, 250);
