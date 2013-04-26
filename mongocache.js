@@ -191,11 +191,8 @@ module.exports = function(options, initcb) {
         });
     };
 
-    var getPopularFilenames = function(count, cb) {
-        var targetDate = new Date();
-        targetDate.setDate(-30);
-
-        collection.find({ length: { $gt: 100000 }, uploadDate: { $gt: targetDate }}).
+    var getPopularFilenames = function(count, since, cb) {
+        collection.find({ length: { $gt: 100000 }, uploadDate: { $gt: since }}).
             sort({ 'metadata.accessCount': -1 }).
             limit(count).toArray(function(err, data) {
             if (err) {
@@ -261,10 +258,10 @@ module.exports = function(options, initcb) {
                         }
                     });
                 },
-                getPopularFiles: function(count, cb) {
+                getPopularFiles: function(count, since, cb) {
                     cb = cb || function() {};
                     count = count || 100;
-                    getPopularFilenames(count, cb);
+                    getPopularFilenames(count, since, cb);
                 },
                 prefetchFile: function(filename, cb) {
                     cb = cb || function() {};

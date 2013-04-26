@@ -1,5 +1,6 @@
 var fs = require('fs'),
-    Cache = require('./parasoupCache.js');
+    Cache = require('./parasoupCache.js'),
+    querystring = require('querystring');
 var soupInterval = 950;
 var mod = function(options) {
     var clients = [],
@@ -98,8 +99,8 @@ var mod = function(options) {
         }
     };
 
-    var sendPopularFiles = function(response) {
-        options.cacheHandler.getPopularFiles(200, function(err, files) {
+    var sendPopularFiles = function(since, response) {
+        options.cacheHandler.getPopularFiles(200, since, function(err, files) {
             if (err) {
                 options.logger.error('sendPopularFiles', err);
                 response.writeHead(500, {
@@ -152,6 +153,29 @@ var mod = function(options) {
         options.stats.parasoups = served;
     };
 
+    var parseGetPopular = function(request, response) {
+        var body = '';
+
+        request.on('data', function(data) {
+            body += data.toString();
+            if (body.length > 10000) {
+                request.socket.destroy();
+                response.end();
+            }
+        });
+
+        request.on('end', function() {
+            var decodedBody = querystring.parse(body);
+            var since = new Date();
+            since.setDate(-30);
+            if (decodedBody && decodedBody.since) {
+                since = new Date(decodedBody.since * 1000);
+            }
+
+            sendPopularFiles(since, response);
+        });
+    };
+
     Cache(options, function(err, tcache) {
         cache = tcache;
         getCacheSize(function() {});
@@ -165,7 +189,7 @@ var mod = function(options) {
                 response: response
             });
         } else if (request.url == '/getPopular?') {
-            sendPopularFiles(response);
+            parseGetPopular(request, response);
         } else if (request.url == '/popular') {
             var html = getPopularContent();
             response.writeHead(200, {

@@ -5,11 +5,11 @@
     <meta name="keywords" content="soup.io, parasoup, funny pictures, scrolling">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css">
-    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
-    <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.2/jquery-ui.min.js"></script>
 </head>
 <body style="margin: 0;">
-<h2>Most Popular in the last 30 days</h2>
+<h2>Most Popular since <input type="text" id="datepicker" /></h2>
 <div id="template" style="display: none; border: 1px solid grey; border-radius: 5px; background-color: #ededed;">
     <p><span class="count"></span> views:</p>
     <div class="container">loading...</div>
@@ -17,47 +17,65 @@
 <a href="https://github.com/exi/soupcache"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" alt="Fork me on GitHub"></a>
 <div id="container"></div>
 <script type="text/javascript">
-    var toload = [];
+    $(function() {
+        $('#datepicker').datepicker({
+            onSelect: function() {
+                var date = Math.round($(this).datepicker('getDate') / 1000);
+                loadSince(date);
+            }
+        })
+        var toload = [];
+        var loading = 0;
+        var maxLoading = 10;
 
-    var loadNext = function() {
-        if (toload.length === 0) {
-            return;
-        }
-        var item = toload.shift();
-        var cont = $('#template').clone();
-        cont.css('display', 'inline-block').css('clear', 'both');
-        cont.find('.count').html(item.count);
-        $('#container').append(cont);
+        var loadNext = function() {
+            if (toload.length === 0 || loading >= maxLoading) {
+                return;
+            }
+            var item = toload.shift();
+            var cont = $('#template').clone();
+            cont.css('display', 'inline-block').css('clear', 'both');
+            cont.find('.count').html(item.count);
+            $('#container').append(cont);
 
-        var img = $('<img />').attr('src', item.url).css('float', 'left');
-        img.load(function() {
-            cont.find('.container').empty().append(img);
-            loadNext();
-        }).error(function() {
-            cont.remove();
-            loadNext();
-        });
-    };
-
-    $.ajax({
-        url: "http://" + window.location.hostname + "/getPopular?",
-        success: function(data, textStatus, xhr) {
-            if (xhr.status == 200) {
-                data.forEach(function(item) {
-                    toload.push(item);
-                });
+            loading++;
+            var img = $('<img />').attr('src', item.url).css('float', 'left');
+            img.load(function() {
+                loading--;
+                $(cont).find('.container').empty().append(img);
                 loadNext();
+            }).error(function() {
+                loading--;
+                $(cont).remove();
                 loadNext();
-                loadNext();
-                loadNext();
+            });
+            while (toload.length !== 0 && loading < maxLoading) {
                 loadNext();
             }
-        },
-        error: function(xhr, ajaxOptions, thrownError) {
-            debugger;
-            console.error(xhr);
-            console.error(thrownError);
-        }
+        };
+
+        var loadSince = function(since) {
+            $('#container').empty();
+            toload = [];
+            $.ajax({
+                type: 'POST',
+                url: "http://" + window.location.hostname + "/getPopular?",
+                data: { since: since },
+                success: function(data, textStatus, xhr) {
+                    if (xhr.status == 200) {
+                        data.forEach(function(item) {
+                            toload.push(item);
+                        });
+                        loadNext();
+                    }
+                },
+                error: function(xhr, ajaxOptions, thrownError) {
+                    debugger;
+                    console.error(xhr);
+                    console.error(thrownError);
+                }
+            });
+        };
     });
     </script>
 </body>
