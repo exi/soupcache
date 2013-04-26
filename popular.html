@@ -23,7 +23,7 @@
 <div id="selector"><h2 style="margin: 0 0 0 10px;">Most Popular since <input type="text" id="datepicker" /></h2></div>
 <div id="template" class="block" style="display: none; border: 1px solid grey; border-radius: 5px; background-color: #ededed; text-align: center;">
     <p><span class="count"></span> views:</p>
-    <div class="container">loading...</div>
+    <div class="container"></div>
 </div>
 <a href="https://github.com/exi/soupcache"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" alt="Fork me on GitHub"></a>
 <div id="container"></div>
@@ -51,7 +51,6 @@
                 stuckClass: 'stuck'
             });
             var loaded = 0;
-            var maxLoading = 10;
             var currentDate;
             var chunks = [];
             var currentProcess;
@@ -90,30 +89,14 @@
 
                 var done = false;
                 $(cont).waypoint(function() {
+                    if (done || settings.stop) {
+                        return;
+                    }
+                    done = true;
                     var img = $('<img />').attr('src', item.url).css('float', 'left');
-                    img.load(function() {
-                        if (done) {
-                            return;
-                        }
-                        settings.loading--;
-                        done = true;
-                        if (!settings.stop) {
-                            var p = $(cont).offset().top;
-                            var vs = $(window).scrollTop();
-                            if (p + $(cont).outerHeight() < vs) {
-                                $(window).scrollTop(vs + this.height);
-                            }
-                            $(cont).find('.container').empty().append(img).css('display', 'inline-block');
-                        }
-                        loadNext(settings);
-                    }).error(function() {
-                        done = true;
-                        settings.loading--;
-                        $(cont).remove();
-                        if (!settings.stop) {
-                            loadNext(settings);
-                        }
-                    });
+                    settings.loading--;
+                    $(cont).find('.container').empty().append(img).css('display', 'inline-block');
+                    loadNext(settings);
                 }, {
                     offset: '200%'
                 });
@@ -154,7 +137,7 @@
                 }
                 requesting = true;
                 var indicator = $('<span>').html('loading...');
-                $('body').append(indicator);
+                $('#container').append(indicator);
                 $.ajax({
                     type: 'POST',
                     url: 'http://' + window.location.hostname + '/getPopular?',
@@ -162,6 +145,9 @@
                     success: function(data, textStatus, xhr) {
                         requesting = false;
                         if (xhr.status == 200) {
+                            if (data.length === 0) {
+                                return indicator.html('no more posts for this time range');
+                            }
                             indicator.remove();
                             cleanTop();
                             loaded += data.length;
@@ -171,9 +157,7 @@
                                 settings.toload.push(item);
                             });
                             currentProcess = settings;
-                            for (var i = 0; i < maxLoading; i++) {
-                                loadNext(settings);
-                            }
+                            loadNext(settings);
                         }
                     },
                     error: function(xhr, ajaxOptions, thrownError) {
@@ -188,7 +172,7 @@
 
             var scrollLock = false;;
             var setCurrentBlock = function(node, noscroll) {
-                if (currentBlock === node || scrollLock) {
+                if (scrollLock) {
                     return;
                 }
                 $(currentBlock).removeClass('current');
