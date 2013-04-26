@@ -7,9 +7,16 @@
     <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css">
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.2/jquery-ui.min.js"></script>
+    <style>
+        .stuck {
+            position: fixed;
+            top: 0px;
+            left: 0px;
+        }
+    </style>
 </head>
 <body style="margin: 0;">
-<h2>Most Popular since <input type="text" id="datepicker" /></h2>
+<div id="selector"><h2 style="margin: 0 0 0 10px;">Most Popular since <input type="text" id="datepicker" /></h2></div>
 <div id="template" style="display: none; border: 1px solid grey; border-radius: 5px; background-color: #ededed;">
     <p><span class="count"></span> views:</p>
     <div class="container">loading...</div>
@@ -17,65 +24,149 @@
 <a href="https://github.com/exi/soupcache"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" alt="Fork me on GitHub"></a>
 <div id="container"></div>
 <script type="text/javascript">
+    {{{WAYPOINT}}}
+</script>
+<script type="text/javascript">
     $(function() {
-        $('#datepicker').datepicker({
-            onSelect: function() {
-                var date = Math.round($(this).datepicker('getDate') / 1000);
-                loadSince(date);
-            }
-        })
-        var toload = [];
-        var loading = 0;
-        var maxLoading = 10;
-
-        var loadNext = function() {
-            if (toload.length === 0 || loading >= maxLoading) {
-                return;
-            }
-            var item = toload.shift();
-            var cont = $('#template').clone();
-            cont.css('display', 'inline-block').css('clear', 'both');
-            cont.find('.count').html(item.count);
-            $('#container').append(cont);
-
-            loading++;
-            var img = $('<img />').attr('src', item.url).css('float', 'left');
-            img.load(function() {
-                loading--;
-                $(cont).find('.container').empty().append(img);
-                loadNext();
-            }).error(function() {
-                loading--;
-                $(cont).remove();
-                loadNext();
-            });
-            while (toload.length !== 0 && loading < maxLoading) {
-                loadNext();
-            }
-        };
-
-        var loadSince = function(since) {
-            $('#container').empty();
-            toload = [];
-            $.ajax({
-                type: 'POST',
-                url: "http://" + window.location.hostname + "/getPopular?",
-                data: { since: since },
-                success: function(data, textStatus, xhr) {
-                    if (xhr.status == 200) {
-                        data.forEach(function(item) {
-                            toload.push(item);
-                        });
-                        loadNext();
+        function init() {
+            $('#datepicker').datepicker({
+                onSelect: function() {
+                    var date = Math.round($(this).datepicker('getDate') / 1000);
+                    loaded = 0;
+                    currentDate = date;
+                    $('#container').empty();
+                    if (currentProcess) {
+                        currentProcess.stop = true;
                     }
-                },
-                error: function(xhr, ajaxOptions, thrownError) {
-                    debugger;
-                    console.error(xhr);
-                    console.error(thrownError);
+                    loadSince(date);
                 }
             });
-        };
+            $('#selector').waypoint('sticky', {
+                stuckClass: 'stuck'
+            });
+            var loaded = 0;
+            var maxLoading = 2;
+            var currentDate;
+            var chunks = [];
+            var currentProcess;
+
+
+            var loadNext = function(settings) {
+                if (!settings || settings.stop) {
+                    return;
+                }
+
+                if (!settings.hasOwnProperty('chunk')) {
+                    settings.chunk = $('<div>');
+                    chunks.push(settings.chunk);
+                    $('#container').append(settings.chunk);
+                }
+
+                if (!settings.hasOwnProperty('loading')) {
+                    settings.loading = 0;
+                }
+
+                if (settings.toload.length === 0) {
+                    if (settings.loading === 0) {
+                        return loadSince(currentDate);
+                    } else {
+                        return;
+                    }
+                }
+
+                settings.loading++;
+
+                var item = settings.toload.shift();
+                var cont = $('#template').clone();
+                cont.css('display', 'inline-block').css('clear', 'both');
+                cont.find('.count').html(item.count);
+                settings.chunk.append(cont);
+
+                var done = false;
+                $(cont).waypoint(function() {
+                    var img = $('<img />').attr('src', item.url).css('float', 'left');
+                    img.load(function() {
+                        if (done) {
+                            return;
+                        }
+                        done = true;
+                        settings.loading--;
+                        $(cont).find('.container').empty().append(img);
+                        loadNext(settings);
+                    }).error(function() {
+                        done = true;
+                        settings.loading--;
+                        $(cont).remove();
+                        loadNext(settings);
+                    });
+                }, {
+                    offset: '150%'
+                });
+            };
+
+            var cleanTop = function() {
+                var finish = false;
+                while (true) {
+                    if (chunks.length === 0) {
+                        return;
+                    }
+                    var c = chunks[0];
+                    var offset = $(c).offset().top;
+                    var h = $(c).outerHeight();
+                    var s = $(c).scrollTop();
+                    var vs = $(window).scrollTop();
+                    if (s + h < vs) {
+                        $(c).remove();
+                        chunks.shift();
+                        $(window).scrollTop(vs - h);
+                    } else {
+                        return;
+                    }
+                }
+            };
+
+            var requesting = false;
+            var loadSince = function(since) {
+                if (requesting) {
+                    return;
+                }
+                requesting = true;
+                var indicator = $('<span>').html('loading...');
+                $('body').append(indicator);
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://' + window.location.hostname + '/getPopular?',
+                    data: { since: since, skip: loaded },
+                    success: function(data, textStatus, xhr) {
+                        requesting = false;
+                        if (xhr.status == 200) {
+                            indicator.remove();
+                            cleanTop();
+                            loaded += data.length;
+                            var settings = { toload: [] };
+                            console.log('loaded to '+ loaded);
+                            data.forEach(function(item) {
+                                settings.toload.push(item);
+                            });
+                            currentProcess = settings;
+                            for (var i = 0; i < maxLoading; i++) {
+                                loadNext(settings);
+                            }
+                        }
+                    },
+                    error: function(xhr, ajaxOptions, thrownError) {
+                        indicator.remove();
+                        requesting = false;
+                        console.error(xhr);
+                        console.error(thrownError);
+                        loadSince(since);
+                    }
+                });
+            };
+
+        }
+
+        init();
     });
     </script>
 </body>

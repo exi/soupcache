@@ -11,7 +11,10 @@ var mod = function(options) {
             return fs.readFileSync('./parasoup.html', 'utf-8');
         },
         getPopularContent = function() {
-            return fs.readFileSync('./popular.html', 'utf-8');
+            return fs.readFileSync('./popular.html', 'utf-8').replace(/\{\{\{WAYPOINT\}\}\}/g, getWaypointContent());
+        },
+        getWaypointContent = function() {
+            return fs.readFileSync('./waypoints.min.js', 'utf-8') + fs.readFileSync('./waypoints-sticky.min.js', 'utf-8');
         },
         served = 0,
         cacheLoaded = false,
@@ -99,8 +102,8 @@ var mod = function(options) {
         }
     };
 
-    var sendPopularFiles = function(since, response) {
-        options.cacheHandler.getPopularFiles(200, since, function(err, files) {
+    var sendPopularFiles = function(since, skip, response) {
+        options.cacheHandler.getPopularFiles(20, since, skip, function(err, files) {
             if (err) {
                 options.logger.error('sendPopularFiles', err);
                 response.writeHead(500, {
@@ -168,11 +171,17 @@ var mod = function(options) {
             var decodedBody = querystring.parse(body);
             var since = new Date();
             since.setDate(-30);
-            if (decodedBody && decodedBody.since) {
-                since = new Date(decodedBody.since * 1000);
+            var skip = 0;
+            if (decodedBody) { 
+                if (decodedBody.since) {
+                    since = new Date(decodedBody.since * 1000);
+                }
+                if (decodedBody.skip) {
+                    skip = parseInt(decodedBody.skip, 10);
+                }
             }
 
-            sendPopularFiles(since, response);
+            sendPopularFiles(since, skip, response);
         });
     };
 
