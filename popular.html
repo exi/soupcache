@@ -13,11 +13,15 @@
             top: 0px;
             left: 0px;
         }
+
+        .current {
+            background-color: grey !important;
+        }
     </style>
 </head>
 <body style="margin: 0;">
 <div id="selector"><h2 style="margin: 0 0 0 10px;">Most Popular since <input type="text" id="datepicker" /></h2></div>
-<div id="template" style="display: none; border: 1px solid grey; border-radius: 5px; background-color: #ededed;">
+<div id="template" class="block" style="display: none; border: 1px solid grey; border-radius: 5px; background-color: #ededed; text-align: center;">
     <p><span class="count"></span> views:</p>
     <div class="container">loading...</div>
 </div>
@@ -34,6 +38,8 @@
                     var date = Math.round($(this).datepicker('getDate') / 1000);
                     loaded = 0;
                     currentDate = date;
+                    currentBlock = null;
+                    chunks = [];
                     $('#container').empty();
                     if (currentProcess) {
                         currentProcess.stop = true;
@@ -49,7 +55,7 @@
             var currentDate;
             var chunks = [];
             var currentProcess;
-
+            var currentBlock;
 
             var loadNext = function(settings) {
                 if (!settings || settings.stop) {
@@ -57,7 +63,7 @@
                 }
 
                 if (!settings.hasOwnProperty('chunk')) {
-                    settings.chunk = $('<div>');
+                    settings.chunk = $('<div>').addClass('chunk');
                     chunks.push(settings.chunk);
                     $('#container').append(settings.chunk);
                 }
@@ -78,7 +84,7 @@
 
                 var item = settings.toload.shift();
                 var cont = $('#template').clone();
-                cont.css('display', 'inline-block').css('clear', 'both');
+                cont.css('display', 'block').css('clear', 'both');
                 cont.find('.count').html(item.count);
                 settings.chunk.append(cont);
 
@@ -89,18 +95,29 @@
                         if (done) {
                             return;
                         }
-                        done = true;
                         settings.loading--;
-                        $(cont).find('.container').empty().append(img);
+                        done = true;
+                        if (!settings.stop) {
+                            $(cont).find('.container').empty().append(img).css('display', 'inline-block');
+                        }
                         loadNext(settings);
                     }).error(function() {
                         done = true;
                         settings.loading--;
                         $(cont).remove();
-                        loadNext(settings);
+                        if (!settings.stop) {
+                            loadNext(settings);
+                        }
                     });
                 }, {
-                    offset: '150%'
+                    offset: '200%'
+                });
+                $(cont).waypoint(function() {
+                    if (!settings.stop) {
+                        setCurrentBlock(cont, true);
+                    }
+                }, {
+                    offset: '20px'
                 });
             };
 
@@ -164,6 +181,72 @@
                 });
             };
 
+            var scrollLock = false;;
+            var setCurrentBlock = function(node, noscroll) {
+                if (currentBlock === node || scrollLock) {
+                    return;
+                }
+                $(currentBlock).removeClass('current');
+                currentBlock = node;
+                $(node).addClass('current');
+                if (!noscroll) {
+                    scrollLock = true;
+                    var p = $(node).offset().top;
+                    $(window).scrollTop(p - 20);
+                    setTimeout(function() {
+                        scrollLock = false;
+                    }, 250);
+                }
+            };
+
+            var jumpToNext = function() {
+                if (currentBlock) {
+                    var b = $(currentBlock).next('.block');
+                    if (b.length > 0) {
+                        setCurrentBlock(b[0]);
+                    } else {
+                        var b = $(currentBlock).closest('.chunk').next('.chunk').children('.block');
+                        if (b.length > 0) {
+                            setCurrentBlock(b[0]);
+                        }
+                    }
+                } else if (chunks.length > 0) {
+                    var b = chunks[0].children('.block');
+                    if (b.length > 0) {
+                        setCurrentBlock(b[0]);
+                    }
+                }
+            };
+
+            var jumpToPrev = function() {
+                if (currentBlock) {
+                    var b = $(currentBlock).prev('.block');
+                    if (b.length > 0) {
+                        setCurrentBlock(b[0]);
+                    } else {
+                        var b = $(currentBlock).closest('.chunk').prev('.chunk').children('.block');
+                        if (b.length > 0) {
+                            setCurrentBlock(b[b.length - 1]);
+                        }
+                    }
+                } else if (chunks.length > 0) {
+                    var b = chunks[0].children('.block');
+                    if (b.length > 0) {
+                        setCurrentBlock(b[0]);
+                    }
+                }
+            };
+
+            var nextKeys = [39/*right*/, 40/*down*/, 74/*j*/, 76/*l*/];
+            var prevKeys = [37/*left*/, 38/*up*/, 75/*k*/, 72/*h*/];
+            $(document).keydown(function(evt) {
+                var key = evt.which || evt.keyCode;
+                if (nextKeys.indexOf(key) !== -1) {
+                    jumpToNext();
+                } else if (prevKeys.indexOf(key) !== -1) {
+                    jumpToPrev();
+                }
+            });
         }
 
         init();
