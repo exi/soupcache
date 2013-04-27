@@ -37,8 +37,8 @@ var mod = function(options) {
             }
 
             that.getNewResponseLocationField = function(location) {
-                return location.replace(/soup\.io/, options.domain).
-                                replace(/https:\/\//, 'http://');
+                return decodeURIComponent(location.replace(/soup\.io/, options.domain).
+                                replace(/https:\/\//, 'http://'));
             };
 
             that.getCorrectResponseCompression = function() {
@@ -345,6 +345,7 @@ var mod = function(options) {
                         port: 443,
                         method: that.request.method,
                         path: that.request.url,
+                        rejectUnauthorized: false,
                         headers: newHeaders
                     });
                 } else {
