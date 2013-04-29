@@ -120,7 +120,8 @@
                     var h = $(c).outerHeight();
                     var s = $(c).scrollTop();
                     var vs = $(window).scrollTop();
-                    if (s + h < vs) {
+                    if (offset + h < vs) {
+                        setScrollLock();
                         $(c).remove();
                         chunks.shift();
                         $(window).scrollTop(vs - h);
@@ -170,21 +171,28 @@
                 });
             };
 
-            var scrollLock = false;;
-            var setCurrentBlock = function(node, noscroll) {
-                if (scrollLock) {
+            var scrollLock = false;
+            var lockTimer = null;
+
+            var setScrollLock = function() {
+                clearTimeout(lockTimer);
+                scrollLock = true;
+                lockTimer = setTimeout(function() {
+                    scrollLock = false;
+                }, 250);
+            };
+
+            var setCurrentBlock = function(node, noscroll, force) {
+                if (scrollLock && !force) {
                     return;
                 }
                 $(currentBlock).removeClass('current');
                 currentBlock = node;
                 $(node).addClass('current');
                 if (!noscroll) {
-                    scrollLock = true;
+                    setScrollLock();
                     var p = $(node).offset().top;
                     $(window).scrollTop(p);
-                    setTimeout(function() {
-                        scrollLock = false;
-                    }, 250);
                 }
             };
 
@@ -192,17 +200,17 @@
                 if (currentBlock) {
                     var b = $(currentBlock).next('.block');
                     if (b.length > 0) {
-                        setCurrentBlock(b[0]);
+                        setCurrentBlock(b[0], null, true);
                     } else {
                         var b = $(currentBlock).closest('.chunk').next('.chunk').children('.block');
                         if (b.length > 0) {
-                            setCurrentBlock(b[0]);
+                            setCurrentBlock(b[0], null, true);
                         }
                     }
                 } else if (chunks.length > 0) {
                     var b = chunks[0].children('.block');
                     if (b.length > 0) {
-                        setCurrentBlock(b[0]);
+                        setCurrentBlock(b[0], null, true);
                     }
                 }
             };
@@ -211,17 +219,17 @@
                 if (currentBlock) {
                     var b = $(currentBlock).prev('.block');
                     if (b.length > 0) {
-                        setCurrentBlock(b[0]);
+                        setCurrentBlock(b[0], null, true);
                     } else {
                         var b = $(currentBlock).closest('.chunk').prev('.chunk').children('.block');
                         if (b.length > 0) {
-                            setCurrentBlock(b[b.length - 1]);
+                            setCurrentBlock(b[b.length - 1], null, true);
                         }
                     }
                 } else if (chunks.length > 0) {
                     var b = chunks[0].children('.block');
                     if (b.length > 0) {
-                        setCurrentBlock(b[0]);
+                        setCurrentBlock(b[0], null, true);
                     }
                 }
             };
