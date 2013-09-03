@@ -53,7 +53,7 @@ function startupComponents(options) {
     onRequest = function(request, response) {
         options.stats.requests++;
 
-        var assetRegex = new RegExp('.*\\.asset\\.' + options.domain),
+        var assetRegex = new RegExp('asset-.\\.' + options.domain),
             statusRegex = new RegExp('status\\.' + options.domain),
             parasoupRegex = new RegExp('^' + options.domain + '$'),
             assetRequestHandler = new assetRequest(options),

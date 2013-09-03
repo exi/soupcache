@@ -43,7 +43,7 @@ var mod = function(options) {
     var deliverToClients = function(url) {
         var md5 = crypto.createHash('md5');
         md5.update(url);
-        var response = 'http://' + md5.digest('hex')[0] + '.asset.' + options.domain + url;
+        var response = 'http://asset-' + md5.digest('hex')[0] + '.' + options.domain + url;
         var addresses = [];
         cacheHandler.prefetchFile(url);
         for (var i = 0; i < clients.length; i++) {
@@ -122,7 +122,7 @@ var mod = function(options) {
                 md5.update(item.path);
                 return {
                     count: item.count,
-                    url: 'http://' + md5.digest('hex')[0] + '.asset.' + options.domainPrefix + item.path
+                    url: 'http://asset-' + md5.digest('hex')[0] + '.' +  options.domainPrefix + item.path
                 };
             });
 

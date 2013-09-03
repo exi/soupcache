@@ -101,7 +101,7 @@ module.exports = function(options, initcb) {
         );
 
         gridstore.open(function(err, gs) {
-            cb(gs);
+            cb(err, gs);
         });
     };
 
@@ -113,7 +113,10 @@ module.exports = function(options, initcb) {
                 access: new Date(),
                 accessCount: 1
             },
-            function(gridstore) {
+            function(err, gridstore) {
+                if (err) {
+                    return cb(err)
+                }
                 gridstore.write(
                     buffer,
                     function(err, result) {
