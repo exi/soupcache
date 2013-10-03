@@ -35,6 +35,24 @@
 <a href="https://github.com/exi/soupcache"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" alt="Fork me on GitHub"></a>
 <div id="container"></div>
 <script type="text/javascript">
+
+    // define cookie functions
+    function setCookie(c_name,value,exdays) {
+      var exdate=new Date();
+      exdate.setDate(exdate.getDate() + exdays);
+      var c_value=escape(value) + ((exdays==null) ? "" : "; expires="+exdate.toUTCString());
+      document.cookie=c_name + "=" + c_value;
+    }
+    function getCookie(name) {
+      var parts = document.cookie.split(name + "=");
+      if (parts.length == 2) return parts.pop().split(";").shift();
+    }
+
+    // create cookie if not defined
+    if (getCookie("soupcachetime")==null && getCookie("soupcachetime")=="") {
+      setCookie("soupcachetime",2000,365);
+    }
+
     var Cache = function() {
         this.name = "default";
         this.constructor = function(cacheSize) {
@@ -152,7 +170,7 @@
     var nodes = [];
     var maxEntries = 15;
     var items = 0;
-    var delay = 2000;
+    var delay = getCookie("soupcachetime");
 
     var continueLoop = function() {
         timer = setTimeout(loop, delay);
@@ -249,12 +267,13 @@
     }
 
     var updateDelay = function() {
-        $("#delay").text(delay+ "ms")
+        $("#delay").text(delay+ "ms");
+        setCookie("soupcachetime", delay, 365);
     }
 
     $(function() {
         $("#slider").slider({
-            value: 2000,
+            value: getCookie("soupcachetime"),
             min: 1000,
             max: 10000,
             slide: function(event, ui) {
