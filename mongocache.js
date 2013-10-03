@@ -140,30 +140,34 @@ module.exports = function(options, initcb) {
         }
         var start = new Date();
         return openDbFileRead(filename, function(gs) {
-            gs.read(function(err, data) {
-                if (err) {
-                    options.logger.error('gridstoreRead ' + filename, err);
-                    cb(err);
-                } else {
-                    getTypeFromGridStore(gs, function(err, type) {
-                        if (err) {
-                            options.logger.error('gettypeFromGridStore ' + filename, err);
-                            cb(err);
-                        } else {
-                            var diff = Math.floor(( new Date() ) - start);
-                            if (!prefetch && diff > 500) {
-                                options.logger.info('query for ' + filename + ' took ' + diff + 'ms');
+            try {
+                gs.read(function(err, data) {
+                    if (err) {
+                        options.logger.error('gridstoreRead ' + filename, err);
+                        cb(err);
+                    } else {
+                        getTypeFromGridStore(gs, function(err, type) {
+                            if (err) {
+                                options.logger.error('gettypeFromGridStore ' + filename, err);
+                                cb(err);
+                            } else {
+                                var diff = Math.floor(( new Date() ) - start);
+                                if (!prefetch && diff > 500) {
+                                    options.logger.info('query for ' + filename + ' took ' + diff + 'ms');
+                                }
+                                var buf = new Buffer(data);
+                                cb(null, buf, type);
+                                gs.close(function() {
+                                    addToCache(filename, buf, type);
+                                    prefetch || increaseAccessCount(filename);
+                                });
                             }
-                            var buf = new Buffer(data);
-                            cb(null, buf, type);
-                            gs.close(function() {
-                                addToCache(filename, buf, type);
-                                prefetch || increaseAccessCount(filename);
-                            });
-                        }
-                    });
-                }
-            });
+                        });
+                    }
+                });
+            } catch (e) {
+                cb(e);
+            }
         });
     };
 
