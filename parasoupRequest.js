@@ -9,13 +9,16 @@ var mod = function(options) {
         cacheSize = null,
         cacheHandler = options.cacheHandler,
         getHtmlContent = function() {
-            return fs.readFileSync('./parasoup.html', 'utf-8');
+            return fs.readFileSync('./parasoup.html', 'utf-8').replace(/\{\{\{COOKIE\}\}\}/g, getCookieContent());
         },
         getPopularContent = function() {
             return fs.readFileSync('./popular.html', 'utf-8').replace(/\{\{\{WAYPOINT\}\}\}/g, getWaypointContent());
         },
         getWaypointContent = function() {
             return fs.readFileSync('./waypoints.min.js', 'utf-8') + fs.readFileSync('./waypoints-sticky.min.js', 'utf-8');
+        },
+        getCookieContent = function() {
+            return fs.readFileSync('./jquery.cookie.js', 'utf-8');
         },
         served = 0,
         cacheLoaded = false,

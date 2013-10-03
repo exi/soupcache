@@ -7,6 +7,9 @@
     <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css">
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+    <script type="text/javascript">
+        {{{COOKIE}}}
+    </script>
     <style type="text/css">
         #slider { width: 250px; margin-right: 10px;}
         #toggler { width: 100%; z-index: 10; background-color: grey; }
@@ -35,6 +38,10 @@
 <a href="https://github.com/exi/soupcache"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" alt="Fork me on GitHub"></a>
 <div id="container"></div>
 <script type="text/javascript">
+    function setCookie(key, value) {
+        $.cookie(key, value, {expires: 9999});
+    }
+
     var Cache = function() {
         this.name = "default";
         this.constructor = function(cacheSize) {
@@ -152,7 +159,7 @@
     var nodes = [];
     var maxEntries = 15;
     var items = 0;
-    var delay = 2000;
+    var delay = $.cookie("parasoup_delay") || 2000;
 
     var continueLoop = function() {
         timer = setTimeout(loop, delay);
@@ -250,6 +257,7 @@
 
     var updateDelay = function() {
         $("#delay").text(delay+ "ms")
+        setCookie("parasoup_delay", delay);
     }
 
     $(function() {
