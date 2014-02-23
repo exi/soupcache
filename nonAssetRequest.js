@@ -37,8 +37,7 @@ var mod = function(options) {
             }
 
             that.getNewResponseLocationField = function(location) {
-                return decodeURIComponent(location.replace(/soup\.io/, options.domain).
-                                replace(/https:\/\//, 'http://'));
+                return decodeURIComponent(location).replace(/.+\/\/([a-zA-Z]+)\.soup\.io/, "http://$1." + options.domain);
             };
 
             that.getCorrectResponseCompression = function() {
