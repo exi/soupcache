@@ -12,6 +12,7 @@ var mod = function(options) {
             that.request = request;
             that.response = response;
             that.soupData = new Buffer('');
+            that.requestData = new Buffer('');
             that.contentEncoding = false;
             that.tries = 0;
 
@@ -42,12 +43,12 @@ var mod = function(options) {
 
             that.getCorrectResponseCompression = function() {
                 var enc = false;
-                if (that.request.headers && that.request.headers['accept-encoding'] && that.contentEncoding) {
-                    var renc = that.request.headers['accept-encoding'];
+                if (that.request.headers && that.request.headers["accept-encoding"] && that.contentEncoding) {
+                    var renc = that.request.headers["accept-encoding"];
                     if (/gzip/.test(renc)) {
-                        enc = 'gzip';
+                        enc = "gzip";
                     } else if (/deflate/.test(renc)) {
-                        enc = 'deflate';
+                        enc = "deflate";
                     }
                 }
 
@@ -61,14 +62,20 @@ var mod = function(options) {
                     newheaders.location = that.getNewResponseLocationField(newheaders.location);
                 }
 
-                var enc = that.getCorrectResponseCompression();
-                if (enc) {
-                    newheaders['content-encoding'] = enc;
-                } else if (newheaders.hasOwnProperty('content-encoding')) {
-                    delete newheaders['content-encoding'];
+                if (newheaders["set-cookie"]) {
+                    newheaders["set-cookie"] = newheaders["set-cookie"].map(function(c) {
+                        return c.replace(new RegExp("soup.io", "g"), options.domain);
+                    });
                 }
 
-                newheaders['content-length'] = that.soupData.length;
+                var enc = that.getCorrectResponseCompression();
+                if (enc) {
+                    newheaders["content-encoding"] = enc;
+                } else if (newheaders.hasOwnProperty("content-encoding")) {
+                    delete newheaders["content-encoding"];
+                }
+
+                newheaders["content-length"] = that.soupData.length;
 
                 return newheaders;
             };
@@ -92,16 +99,16 @@ var mod = function(options) {
                         }
                     );
                 } else {
-                    callback(new Buffer(''));
+                    callback(new Buffer(""));
                 }
             };
 
             that.unpackCompressedData = function(data, encoding, callback) {
                 var decompressor;
 
-                if (encoding == 'gzip') {
+                if (encoding == "gzip") {
                     decompressor = zlib.gunzip;
-                } else if (encoding == 'deflate') {
+                } else if (encoding == "deflate") {
                     decompressor = zlib.inflate;
                 } else {
                     decompressor = function(data, cb) {
@@ -121,9 +128,9 @@ var mod = function(options) {
             that.compressData = function(data, encoding, callback) {
                 var compressor;
 
-                if (encoding == 'gzip') {
+                if (encoding == "gzip") {
                     compressor = zlib.gzip;
-                } else if (encoding == 'deflate') {
+                } else if (encoding == "deflate") {
                     compressor = zlib.deflateRaw;
                 } else {
                     compressor = function(data, cb) {
@@ -188,28 +195,19 @@ var mod = function(options) {
                         that.getModifiedSoupResponseHeaders(that.soupResponse.headers));
             }
 
-            that.setAcceptEncoding = function(headers) {
-                headers['Accept-Encoding'] = 'gzip, deflate';
-                return headers;
-            };
-
-            that.setNewRequestHost = function(headers) {
-                headers['host'] = that.getSoupDomain();
-                return headers;
-            };
-
-            that.setNewReferrer = function(headers) {
-                if (headers['referer']) {
-                    headers['referer'] = headers['referer'].replace(new RegExp(options.domain), "soup.io");
-                }
-                return headers;
-            };
-
             that.getModifiedSoupRequestHeader = function(oheaders) {
                 var headers = JSON.parse(JSON.stringify(oheaders));
-                headers = that.setAcceptEncoding(headers);
-                headers = that.setNewRequestHost(headers);
-                headers = that.setNewReferrer(headers);
+                headers["accept-encoding"] = "gzip,deflate";
+                headers["host"] = that.getSoupDomain();
+                if (headers.referer) {
+                    headers.referer = headers.referer.replace(new RegExp(options.domain, "g"), "soup.io");
+                }
+                if (headers.origin) {
+                    headers.origin = headers.origin.replace(new RegExp(options.domain, "g"), "soup.io");
+                }
+                if (headers.cookie) {
+                    headers.cookie = headers.cookie.replace(new RegExp(options.domain, "g"), "soup.io");
+                }
                 return headers;
             };
 
@@ -217,11 +215,11 @@ var mod = function(options) {
                 var textTypeRegex = /text/,
                     applicationTypeRegex = /application/;
 
-                if (!headers['content-type']) {
+                if (!headers["content-type"]) {
                     return true;
-                } else if (headers['content-type'].search(textTypeRegex) != -1) {
+                } else if (headers["content-type"].search(textTypeRegex) != -1) {
                     return true;
-                } else if (headers['content-type'].search(applicationTypeRegex) != -1) {
+                } else if (headers["content-type"].search(applicationTypeRegex) != -1) {
                     return true;
                 }
 
@@ -232,10 +230,10 @@ var mod = function(options) {
                 try {
                     var newbuf = new Buffer(that.soupData.length + chunk.length);
                     that.soupData.copy(newbuf, 0, 0);
-                    newbuf.write(chunk, that.soupData.length, chunk.length, 'binary');
+                    newbuf.write(chunk, that.soupData.length, chunk.length, "binary");
                     that.soupData = newbuf;
                 } catch (e) {
-                    options.logger.error("soupDate", e);
+                    options.logger.error("soupData", e);
                 }
             };
 
@@ -262,7 +260,7 @@ var mod = function(options) {
 
             that.onSoupEnd = function() {
                 that.writeResponseHead();
-                if (that.soupData.length > 0 && that.request.method != 'HEAD') {
+                if (that.soupData.length > 0 && that.request.method != "HEAD") {
                     var data = that.soupData;
                     options.stats.dataCount[that.request.connection.remoteAddress] += that.soupData.length;
                     that.response.write(data);
@@ -274,26 +272,26 @@ var mod = function(options) {
             that.onSoupResponse = function(res) {
                 that.soupResponse = res;
 
-                switch (res.headers['content-encoding']) {
-                    case 'gzip':
-                        that.contentEncoding = 'gzip';
+                switch (res.headers["content-encoding"]) {
+                    case "gzip":
+                        that.contentEncoding = "gzip";
                         break;
-                    case 'deflate':
-                        that.contentEncoding = 'deflate';
+                    case "deflate":
+                        that.contentEncoding = "deflate";
                         break;
                     default:
                         that.contentEncoding = false;
                         break;
                 }
 
-                res.setEncoding('binary');
+                res.setEncoding("binary");
 
-                res.on('data', that.onSoupData);
+                res.on("data", that.onSoupData);
 
                 if (that.shouldTransformData(res.headers)) {
-                    res.on('end', that.onSoupEndTransform);
+                    res.on("end", that.onSoupEndTransform);
                 } else {
-                    res.on('end', that.onSoupEnd);
+                    res.on("end", that.onSoupEnd);
                 }
             };
 
@@ -313,11 +311,18 @@ var mod = function(options) {
             };
 
             that.onRequestData = function(chunk) {
-                that.proxy_request.write(chunk);
+                try {
+                    var newbuf = new Buffer(that.requestData.length + chunk.length);
+                    that.requestData.copy(newbuf, 0, 0);
+                    newbuf.write(chunk, that.requestData.length, chunk.length, "binary");
+                    that.requestData = newbuf;
+                } catch (e) {
+                    options.logger.error("reqeustData", e);
+                }
             };
 
             that.onRequestEnd = function() {
-                that.proxy_request.end();
+                that.respondeWithOriginalPage();
             };
 
             that.onRequestTimeout = function() {
@@ -338,12 +343,13 @@ var mod = function(options) {
                 that.subDomain = subDomain;
 
                 var newHeaders = that.getModifiedSoupRequestHeader(that.request.headers);
+                var newPath = that.request.url.replace(new RegExp(options.domain, "g"), "soup.io");
                 if (request.url && isHttpsLink(request.url)) {
                     that.proxy_request = https.request({
                         host: that.getSoupDomain(),
                         port: 443,
                         method: that.request.method,
-                        path: that.request.url,
+                        path: newPath,
                         rejectUnauthorized: false,
                         headers: newHeaders
                     });
@@ -352,20 +358,20 @@ var mod = function(options) {
                         host: that.getSoupDomain(),
                         port: 80,
                         method: that.request.method,
-                        path: that.request.url,
+                        path: newPath,
                         headers: newHeaders
                     });
                 };
 
-                that.proxy_request.on('response', that.onSoupResponse);
-                that.proxy_request.on('error', that.onSoupError);
-                that.request.setEncoding('binary');
-                that.request.on('data', that.onRequestData);
-                that.request.on('end', that.onRequestEnd);
+                that.proxy_request.on("response", that.onSoupResponse);
+                that.proxy_request.on("error", that.onSoupError);
+                that.proxy_request.end(that.requestData);
             };
 
             try {
-                that.respondeWithOriginalPage();
+                that.request.setEncoding("binary");
+                that.request.on("data", that.onRequestData);
+                that.request.on("end", that.onRequestEnd);
             } catch (e) {
                 options.logger.error("respondeWithOriginalPage" , e);
             }
