@@ -13,6 +13,8 @@
     "maintenanceTriggerFile": "maintenance.lock",
     "maintenanceMessageFile": "maintenance.html",
     "statsPerSecond": 4,
+    "loginTokenFile": "logins.json",
+    "sessionLength": 31557600,
     "auth": {
         "users": {
             "parasoup": "88a5ab39ba2d0fad624f280479d41858"

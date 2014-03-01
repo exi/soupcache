@@ -3,13 +3,39 @@ var httpdigestauth = require('http-digest-auth'),
     crypto = require('crypto'),
     realm = 'Parasoup',
     url = require('url'),
-    loginStore = {};
+    fs = require('fs');
 
 function isExpired(time) {
     return time.getTime() < new Date().getTime();
 }
 
 module.exports = function(options) {
+    var loginStore = {},
+        sessionLength = options.sessionLength || 31557600; // 1 year in seconds
+
+    function storeWriter() {
+        var data = JSON.stringify(loginStore);
+        fs.writeFileSync(options.loginTokenFile, data);
+        setTimeout(storeWriter, 10000);
+    };
+
+    if (options.loginTokenFile) {
+        if (fs.existsSync(options.loginTokenFile)) {
+            try {
+            loginStore = JSON.parse(fs.readFileSync(options.loginTokenFile));
+            for (var key in loginStore) {
+                var token = loginStore[key];
+                if (token.expires) {
+                    token.expires = new Date(token.expires);
+                }
+            }
+            } catch (e) { }
+        }
+
+        storeWriter();
+    }
+
+
     return {
         checkAuth: function(request, response) {
             if (request.connection.remoteAddress == '188.40.102.160') {
@@ -44,7 +70,7 @@ module.exports = function(options) {
 
             token = crypto.createHash('sha256').
                 update('' + Math.floor(Math.random() * (new Date()).getTime())).digest('hex');
-            var expires = new Date(new Date().getTime() + 1000 * 60 * 60 * 12);
+            var expires = new Date(new Date().getTime() + 1000 * sessionLength);
             cookies.set('token', '' + token, { domain: '.' + options.domainPrefix });
             loginStore[token] = { expires: expires };
 
