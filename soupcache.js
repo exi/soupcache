@@ -172,7 +172,8 @@ function startupComponents(options) {
     });
 
     options.statPrinter = new statPrinter(statusProvider, options.statsPerSecond);
-
+    options.logger.info("startup done");
+    options.logger.console("startup done");
 };
 
 server = http.createServer(requestDispatcher).listen(options.port, options.ip, function() {
@@ -201,7 +202,8 @@ server = http.createServer(requestDispatcher).listen(options.port, options.ip, f
         if (err) {
             throw err;
         } else {
-            console.log('starting components');
+            options.logger.info("startup");
+            options.logger.console("startup");
             startupComponents(options);
         }
     });
