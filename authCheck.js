@@ -71,7 +71,7 @@ module.exports = function(options) {
             token = crypto.createHash('sha256').
                 update('' + Math.floor(Math.random() * (new Date()).getTime())).digest('hex');
             var expires = new Date(new Date().getTime() + 1000 * sessionLength);
-            cookies.set('token', '' + token, { domain: '.' + options.domainPrefix });
+            cookies.set('token', '' + token, { domain: '.' + options.domainPrefix, expires: expires });
             loginStore[token] = { expires: expires };
 
             var query = url.parse(request.url, true).query;
