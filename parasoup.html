@@ -125,7 +125,7 @@
                     load(function() {
                         $(this).hide().css('float', 'left');
                         var a = $("<a />").
-                            attr("href", "http://images.google.com/searchbyimage?image_url=" + url.replace(/parasoup\.de/g, "soup.io")).
+                            attr("href", url.replace(/[a-zA-Z0-9\-]*\.parasoup\.de/g, "whatthepost.parasoup.de")).
                             attr("target", "_blank").
                             prepend(this);
                         that.add(a);
