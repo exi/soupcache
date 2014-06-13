@@ -1,7 +1,9 @@
 {
     "domainPrefix": "parasoup.de",
-    "ip": "1.1.1.1",
-    "port": 80,
+    "listen": [{
+        "ip": "1.1.1.1",
+        "port": 80
+    }],
     "timeout": 30000,
     "mongodb": {
         "host": "127.0.0.1",

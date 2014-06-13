@@ -176,7 +176,7 @@ function startupComponents(options) {
     options.logger.console("startup done");
 };
 
-server = http.createServer(requestDispatcher).listen(options.port, options.ip, function() {
+function dropPrivsAndStart() {
     process.setuid(options.uid);
 
     async.series({
@@ -206,5 +206,23 @@ server = http.createServer(requestDispatcher).listen(options.port, options.ip, f
             options.logger.console("startup");
             startupComponents(options);
         }
+    });
+}
+
+function onListen(listener) {
+    onListen.listeners++;
+    console.log('listen', listener)
+    if (options.listen.length === onListen.listeners) {
+        dropPrivsAndStart();
+    }
+}
+onListen.listeners = 0;
+
+
+server = http.createServer(requestDispatcher);
+options.listen.forEach(function(l) {
+    console.log('try listen', l);
+    server.listen(l.port, l.ip, function() {
+        onListen(l);
     });
 });

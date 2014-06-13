@@ -110,7 +110,7 @@ var assetDownload = function(mirror, url, options, callback) {
             soupRequest.abort();
             retry();
         } else {
-            status = "wayting for data";
+            status = "waiting for data";
             res.setEncoding('binary');
             var contentLength = parseInt(res.headers['content-length']);
             fileSize = contentLength;
