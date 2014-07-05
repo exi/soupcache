@@ -84,7 +84,7 @@ Logger.prototype.info = function(msg) {
 }
 
 Logger.prototype.console = function(msg) {
-    console.log(msg);
+    console.log('console: ', msg);
 }
 
 Logger.prototype.getLogDate = function() {

@@ -306,7 +306,7 @@ var mod = function(options) {
                     setTimeout(that.respondeWithOriginalPage, 500);
                 } else {
                     options.logger.error("aborting non asset request after " + that.tries + " tries", error);
-                    that.response.end();
+                    that.response.end("Sorry but soup.io seems broken right now :(");
                 }
             };
 
@@ -328,7 +328,7 @@ var mod = function(options) {
             that.onRequestTimeout = function() {
                 options.logger.error("aborting non asset request due to timeout");
                 that.proxy_request.abort();
-                that.response.end();
+                that.response.end("Timeout reached, sorry :(");
             }
 
             var isHttpsLink = function(url) {
